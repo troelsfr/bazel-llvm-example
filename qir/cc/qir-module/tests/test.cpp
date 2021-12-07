@@ -1,4 +1,4 @@
-#include "qir/cc/qir-module/qir-module.hpp"
+#include "qir/cc/qir-module/qir-builder.hpp"
 
 #include <iostream>
 

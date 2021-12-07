@@ -12,6 +12,7 @@ build --cxxopt=-std=c++14
 build --host_cxxopt=-std=c++14
 build --cxxopt=-DTROELS=1
 build --sandbox_debug
+build --copt="-fvisibility=hidden"
 
 # Ideally these should be moved to user configuration
 build --cxxopt=-O0
