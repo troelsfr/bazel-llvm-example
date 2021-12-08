@@ -51,4 +51,17 @@ inline TypedValuePtr operator*(TypedValuePrototypePtr const &a, TypedValueProtot
   return TypedValue::create(a->typeId(), a->builder(), a->builder().CreateMul(a_val, b_val));
 }
 
+inline TypedValuePtr operator==(TypedValuePrototypePtr const &a, TypedValuePrototypePtr const &b)
+{
+  if (a->typeId() != b->typeId())
+  {
+    throw std::runtime_error("Cannot multiply operands of different types.");
+  }
+
+  auto &context = a->builder().getContext();
+  auto  a_val   = a->toValue(&context, a->builder());
+  auto  b_val   = b->toValue(&context, b->builder());
+
+  return TypedValue::create(a->typeId(), a->builder(), a->builder().CreateICmpEQ(a_val, b_val));
+}
 }  // namespace compiler

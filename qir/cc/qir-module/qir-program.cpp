@@ -28,6 +28,11 @@ QirProgram::QirProgram()
                      std::type_index(typeid(void)), sizeof(int64_t)};
 }
 
+QirProgram::~QirProgram()
+{
+  finalise();
+}
+
 QirProgram::LlvmContext *QirProgram::context()
 {
   return context_.get();
@@ -84,6 +89,7 @@ QirBuilderPtr QirProgram::newFunction(String const &name, QirType return_type, A
 
 QirProgram::String QirProgram::getQir()
 {
+  finalise();
   // TODO: Move to program
   String                   str;
   llvm::raw_string_ostream ostream(str);
@@ -91,4 +97,58 @@ QirProgram::String QirProgram::getQir()
   ostream.flush();
   return str;
 }
+
+void QirProgram::removeBuilder(QirBuilder *builder)
+{
+  builders_.erase(builder);
+}
+
+void QirProgram::addBuilder(QirBuilder *builder)
+{
+  builders_.insert(builder);
+}
+
+void QirProgram::finalise()
+{
+  // We make a copy as calling finalise on the builders
+  // will remove them from the list and hence mess the iterators up.
+  auto copy = builders_;
+  for (auto &b : copy)
+  {
+    b->finalise();
+  }
+
+  assert(builders_.size() == 0);
+}
+
+QirProgram::Function *QirProgram::getOrDeclareFunction(String name, String const &return_type,
+                                                       ArgTypeNames const &arguments)
+{
+  auto it = function_declaration_cache_.find(name);
+  if (it != function_declaration_cache_.end())
+  {
+    // TODO: Validate signature
+    return it->second.function;
+  }
+
+  FunctionDeclaration decl;
+  decl.name           = name;
+  decl.return_type    = return_type;
+  decl.argument_types = arguments;
+
+  auto                ret_type = getLlvmType(return_type);
+  std::vector<Type *> args{};
+  for (auto &a : arguments)
+  {
+    args.push_back(getLlvmType(a));
+  }
+
+  llvm::FunctionType *signture = llvm::FunctionType::get(ret_type, args, false);
+  decl.function = llvm::Function::Create(signture, llvm::Function::LinkageTypes::ExternalLinkage,
+                                         "__quantum__qis__x__body", *module_);
+
+  function_declaration_cache_[name] = decl;
+  return decl.function;
+}
+
 }  // namespace compiler

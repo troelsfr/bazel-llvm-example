@@ -20,16 +20,35 @@ QirBuilder::QirBuilder(QirProgram &qir_program, LlvmBlock *block)
   : qir_program_{qir_program}
   , builder_{*qir_program.context()}
   , block_{block}
-
 {
+  qir_program_.addBuilder(this);
   setupBuiltIns();
 
   builder_.SetInsertPoint(block_);
 }
 
+QirBuilder::~QirBuilder()
+{
+  finalise();
+}
+
 void QirBuilder::returnValue(TypedValuePrototypePtr const &value)
 {
   builder_.CreateRet(value->toValue(qir_program_.context(), builder_));
+}
+
+IfStatementPtr QirBuilder::ifStatement(TypedValuePrototypePtr const &value)
+{
+  auto val = value->toValue(qir_program_.context(), builder_);
+  auto false_block =
+      llvm::BasicBlock::Create(*qir_program_.context(), "exit_if", block_->getParent());
+  auto true_block = llvm::BasicBlock::Create(*qir_program_.context(), "if_true",
+                                             block_->getParent(), false_block);
+  builder_.CreateCondBr(val, true_block, false_block);
+
+  block_ = false_block;
+  builder_.SetInsertPoint(block_);
+  return IfStatement::create(qir_program_, true_block, false_block);
 }
 
 ConstantIntegerPtr QirBuilder::toInt8(int8_t const &value)
@@ -85,8 +104,7 @@ MutableHeapVariablePtr QirBuilder::newHeapVariable(QirType element_type, String 
   auto  type_size       = toInt64(element_type.size)->toConstant(qir_program_.context(), builder_);
 
   auto alloc_type_size = llvm::ConstantExpr::getTruncOrBitCast(type_size, malloc_arg_type);
-  auto instr           = llvm::CallInst::CreateMalloc(block_, malloc_arg_type,
-                                                      llvm::PointerType::get(element_type.value, 0),
+  auto instr           = llvm::CallInst::CreateMalloc(block_, malloc_arg_type, element_type.value,
                                                       alloc_type_size, nullptr, nullptr);
 
   builder_.Insert(instr);
@@ -103,8 +121,7 @@ MutableHeapArrayPtr QirBuilder::newHeapArray(QirType element_type, TypedValuePro
   auto  llvm_size       = size->toValue(qir_program_.context(), builder_);
 
   auto alloc_type_size = llvm::ConstantExpr::getTruncOrBitCast(type_size, malloc_arg_type);
-  auto instr           = llvm::CallInst::CreateMalloc(block_, malloc_arg_type,
-                                                      llvm::PointerType::get(element_type.value, 0),
+  auto instr           = llvm::CallInst::CreateMalloc(block_, malloc_arg_type, element_type.value,
                                                       alloc_type_size, llvm_size, nullptr);
 
   builder_.Insert(instr);
@@ -113,56 +130,41 @@ MutableHeapArrayPtr QirBuilder::newHeapArray(QirType element_type, TypedValuePro
   return ret;
 }
 
-ConstantIntegerPtr QirBuilder::constantGetElement(ConstantArrayPtr const   &array,
-                                                  ConstantIntegerPtr const &index)
+TypedValuePtr QirBuilder::constantGetElement(ConstantArrayPtr const   &array,
+                                             ConstantIntegerPtr const &index)
 {
-  llvm::errs() << *array->elementType() << "\n";
+  auto ptr_type = llvm::PointerType::get(array->elementType(), 0);
+
   auto llvm_arr   = array->toConstant(qir_program_.context(), builder_);
   auto llvm_index = index->toConstant(qir_program_.context(), builder_);
-  llvm::errs() << *llvm_arr << "\n";
-  llvm::errs() << *llvm_index << "\n";
 
-  llvm::errs() << *llvm::ConstantExpr::getGetElementPtr(array->type(), llvm_arr, llvm_index)
-               << "\n";
-  return index;
+  auto ptr = llvm::ConstantExpr::getGetElementPtr(array->type(), llvm_arr, llvm_index);
+
+  // TODO:
+  auto raw_ptr = llvm::ConstantExpr::getBitCast(ptr, ptr_type);
+  auto ret     = TypedValue::create(array->typeId(), builder_,
+                                    builder_.CreateLoad(array->elementType(), raw_ptr));
+
+  return ret;
 }
 
 void QirBuilder::setupBuiltIns()
 {
-  std::vector<Type *> no_args{};
-  auto                qubit_type = qir_program_.getLlvmType("Qubit");
-  auto                void_type  = qir_program_.getLlvmType("Void");
-  // Qubit allocator
-  llvm::FunctionType *qubit_alloc_signature = llvm::FunctionType::get(qubit_type, no_args, false);
-  qubit_allocator_ =
-      llvm::Function::Create(qubit_alloc_signature, llvm::Function::LinkageTypes::ExternalLinkage,
-                             "__quantum__qis__qubit_create", qir_program_.module());
-
-  /// X
-  std::vector<Type *> arg_types1{qubit_type};
-  llvm::FunctionType *quantum_x_signature = llvm::FunctionType::get(void_type, arg_types1, false);
-  quantum_x_ =
-      llvm::Function::Create(quantum_x_signature, llvm::Function::LinkageTypes::ExternalLinkage,
-                             "__quantum__qis__x__body", qir_program_.module());
-
-  /// Z
-  llvm::FunctionType *quantum_z_signature = llvm::FunctionType::get(void_type, arg_types1, false);
-  quantum_z_ =
-      llvm::Function::Create(quantum_z_signature, llvm::Function::LinkageTypes::ExternalLinkage,
-                             "__quantum__qis__z__body", qir_program_.module());
-
-  /// CNOT
-  std::vector<Type *> arg_types2{qubit_type, qubit_type};
-  llvm::FunctionType *quantum_cnot_signature =
-      llvm::FunctionType::get(void_type, arg_types2, false);
+  qubit_allocator_ = qir_program_.getOrDeclareFunction("__quantum__qis__qubit_create", "Qubit");
+  quantum_x_ = qir_program_.getOrDeclareFunction("__quantum__qis__x__body", "Void", {"Qubit"});
+  quantum_z_ = qir_program_.getOrDeclareFunction("__quantum__qis__z__body", "Void", {"Qubit"});
   quantum_cnot_ =
-      llvm::Function::Create(quantum_cnot_signature, llvm::Function::LinkageTypes::ExternalLinkage,
-                             "__quantum__qis__cnot__body", qir_program_.module());
+      qir_program_.getOrDeclareFunction("__quantum__qis__cnot__body", "Void", {"Qubit", "Qubit"});
+}
+
+bool QirBuilder::isActive()
+{
+  return block_->getTerminator() == nullptr;
 }
 
 void QirBuilder::requireIsActive()
 {
-  if (!is_active_)
+  if (!isActive())
   {
     throw std::runtime_error("Block was finalised and cannot be modified.");
   }

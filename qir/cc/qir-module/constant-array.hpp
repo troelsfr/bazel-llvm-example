@@ -33,18 +33,23 @@ public:
   }
   virtual ~ConstantArray() = default;
 
-  Constant *toConstant(LLVMContext *context, Builder & /*builder*/) const override
+  Constant *toConstant(LLVMContext *context, Builder &builder) const override
   {
     for (auto const &v : values_)
     {
       llvm::errs() << " - " << *v << "\n";
     }
-    return llvm::ConstantArray::get(type_, values_);
+    auto module = builder.GetInsertBlock()->getModule();
+    auto c = llvm::ConstantArray::get(llvm::ArrayType::get(element_type_, values_.size()), values_);
+    return new llvm::GlobalVariable(*module, type_, true, llvm::GlobalValue::InternalLinkage, c,
+                                    "helloTest");
   }
 
-  Value *toValue(LLVMContext *context, Builder & /*builder*/) const override
+  Value *toValue(LLVMContext *context, Builder &builder) const override
   {
-    return llvm::ConstantArray::get(llvm::ArrayType::get(element_type_, values_.size()), values_);
+    auto module = builder.GetInsertBlock()->getModule();
+    auto c = llvm::ConstantArray::get(llvm::ArrayType::get(element_type_, values_.size()), values_);
+    return new llvm::GlobalVariable(*module, type_, true, llvm::GlobalValue::InternalLinkage, c);
   }
 
   std::string toString() const override

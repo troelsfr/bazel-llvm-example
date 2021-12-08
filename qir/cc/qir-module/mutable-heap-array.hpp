@@ -33,9 +33,9 @@ public:
 
   void set(TypedValuePrototypePtr const &index, TypedValuePrototypePtr const &value)
   {
+    auto idx = index->toValue(qir_program_.context(), builder_);
     auto val = value->toValue(qir_program_.context(), builder_);
-    auto ptr =
-        builder_.CreateGEP(type_.value, instr_, index->toValue(qir_program_.context(), builder_));
+    auto ptr = builder_.CreateGEP(type_.value, instr_, idx);
     TypedValue::create(type_.type_id, builder_, builder_.CreateStore(val, ptr));
   }
 

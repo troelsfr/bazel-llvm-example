@@ -47,15 +47,18 @@ PYBIND11_MODULE(pyqir, module)
                   [](TypedValuePrototypePtr &a, TypedValuePrototypePtr &b) { return a + b; });
   typed_value.def("__mul__",
                   [](TypedValuePrototypePtr &a, TypedValuePrototypePtr &b) { return a * b; });
+  typed_value.def("__eq__",
+                  [](TypedValuePrototypePtr &a, TypedValuePrototypePtr &b) { return a == b; });
 
-  py::class_<QirBuilder, QirBuilderPtr>(module, "QirBuilder")
-      .def("to_int8", &QirBuilder::toInt8)
+  auto builder = py::class_<QirBuilder, QirBuilderPtr>(module, "QirBuilder");
+  builder.def("to_int8", &QirBuilder::toInt8)
       .def("to_int16", &QirBuilder::toInt16)
       .def("to_int32", &QirBuilder::toInt32)
       .def("to_int64", &QirBuilder::toInt64)
       .def("constant_array", &QirBuilder::constantArray)
       .def("constant_get_element", &QirBuilder::constantGetElement)
       .def("return_value", &QirBuilder::returnValue)
+      .def("if_statement", &QirBuilder::ifStatement)
       .def("new_heap_variable", &QirBuilder::newHeapVariable)
       .def("new_heap_array", &QirBuilder::newHeapArray)
       .def("new_stack_variable", &QirBuilder::newStackVariable)
@@ -65,8 +68,13 @@ PYBIND11_MODULE(pyqir, module)
       .def("z", &QirBuilder::z)
       .def("cnot", &QirBuilder::cnot);
 
+  auto else_stmt = py::class_<ElseStatement, ElseStatementPtr>(module, "ElseStatement", builder);
+  auto if_stmt   = py::class_<IfStatement, IfStatementPtr>(module, "IfStatement", else_stmt)
+                     .def("else_statement", &IfStatement::elseStatement);
+
   py::class_<QirProgram>(module, "QirProgram")
       .def(py::init<>())
+      .def("finalise", &QirProgram::finalise)
       .def("new_function", &QirProgram::newFunction)
       .def("get_type", &QirProgram::getType)
       .def("get_qir", &QirProgram::getQir);
