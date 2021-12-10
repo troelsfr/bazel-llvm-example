@@ -1,5 +1,8 @@
 #pragma once
 #include "qir/cc/llvm/llvm.hpp"
+#include "qir/cc/qir-module/constant-int.hpp"
+#include "qir/cc/qir-module/function-declaration.hpp"
+#include "qir/cc/qir-module/qir-scope.hpp"
 #include "qir/cc/qir-module/typed-value.hpp"
 
 #include <iostream>
@@ -13,22 +16,12 @@ class QirBuilder;
 
 struct QirType
 {
-  using Type = llvm::Type;
+  using String = std::string;
+  using Type   = llvm::Type;
   Type           *value{nullptr};
   std::type_index type_id{std::type_index(typeid(void))};
   int64_t         size{sizeof(int64_t)};
-};
-
-struct FunctionDeclaration
-{
-  using String       = std::string;
-  using Function     = llvm::Function;
-  using ArgTypeNames = std::vector<String>;
-
-  Function    *function{nullptr};
-  String       name{};
-  String       return_type{};
-  ArgTypeNames argument_types{};
+  String          name;
 };
 
 class QirProgram
@@ -57,10 +50,14 @@ public:
   LlvmModule  *module();
 
   QirType getType(String const &name);
-  Type   *getLlvmType(String const &name);
+  QirType getType(std::type_index const &type_id);
 
-  QirBuilderPtr newFunction(String const &name, QirType return_type = QirType(),
-                            Arguments args = Arguments());
+  Type *getLlvmType(String const &name);
+
+  //  QirBuilderPtr newFunction(String const &name, QirType return_type = QirType(),
+  //                            Arguments args = Arguments());
+  QirBuilderPtr newFunction(String const &name, String const &return_type = "Void",
+                            ArgTypeNames const &arguments = {});
 
   String getQir();
 
@@ -68,15 +65,32 @@ public:
   void removeBuilder(QirBuilder *builder);
   void finalise();
 
-  Function *getOrDeclareFunction(String name, String const &return_type = "Void",
+  Function *getOrDeclareFunction(String const &name, String const &return_type = "Void",
                                  ArgTypeNames const &arguments = {});
 
-private:
+  FunctionDeclaration getFunctionByLlvmName(String const &name);
+
+  ConstantIntegerPtr toInt8(llvm::IRBuilder<> &builder, int8_t const &value);
+  ConstantIntegerPtr toInt16(llvm::IRBuilder<> &builder, int16_t const &value);
+  ConstantIntegerPtr toInt32(llvm::IRBuilder<> &builder, int32_t const &value);
+  ConstantIntegerPtr toInt64(llvm::IRBuilder<> &builder, int64_t const &value);
+
+  QirScope &scope()
+  {
+    return *scope_;
+  }
+
   std::unique_ptr<LlvmContext> context_{};
   std::unique_ptr<LlvmModule>  module_{};
 
-  std::unordered_map<String, QirType> types_{};
-  Builders                            builders_{};
+private:
+  void registerType(QirType const &type);
+
+  std::unordered_map<String, QirType>          types_{};
+  std::unordered_map<std::type_index, QirType> from_native_types_{};
+
+  Builders    builders_{};
+  QirScopePtr scope_{nullptr};
 
   FunctionCache function_declaration_cache_{};
 };

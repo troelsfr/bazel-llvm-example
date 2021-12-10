@@ -10,10 +10,11 @@ class TypedValue;
 class TypedValuePrototype
 {
 public:
-  using Value       = llvm::Value;
-  using Constant    = llvm::Constant;
-  using LLVMContext = llvm::LLVMContext;
-  using Builder     = llvm::IRBuilder<>;
+  using Value                  = llvm::Value;
+  using Constant               = llvm::Constant;
+  using LLVMContext            = llvm::LLVMContext;
+  using Builder                = llvm::IRBuilder<>;
+  using TypedValuePrototypePtr = ValueContianer<TypedValuePrototype>;
 
   using Assigned = void;
 
@@ -33,10 +34,17 @@ public:
     return builder_;
   }
 
+  virtual void                   writeValue(Value *);
+  virtual Value                 *readValue();
+  virtual Constant              *readConstant();
+  virtual TypedValuePrototypePtr getArrayElement(TypedValuePrototypePtr const &index);
+
 protected:
   std::type_index    type_id_;
   llvm::IRBuilder<> &builder_;
-};
-using TypedValuePrototypePtr = ValueContianer<TypedValuePrototype>;
 
+  Value    *value_{nullptr};
+  Constant *constant_{nullptr};
+};
+using TypedValuePrototypePtr = TypedValuePrototype::TypedValuePrototypePtr;
 }  // namespace compiler

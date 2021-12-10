@@ -27,4 +27,37 @@ std::type_index TypedValuePrototype::typeId() const
   return type_id_;
 }
 
+TypedValuePrototype::Value *TypedValuePrototype::readValue()
+{
+  if (!value_)
+  {
+    auto &context = builder_.getContext();
+    value_        = toValue(&context, builder_);
+  }
+
+  return value_;
+}
+
+TypedValuePrototype::Constant *TypedValuePrototype::readConstant()
+{
+  if (!constant_)
+  {
+    auto &context = builder_.getContext();
+    constant_     = toConstant(&context, builder_);
+    value_        = constant_;
+  }
+
+  return constant_;
+}
+
+void TypedValuePrototype::writeValue(Value *)
+{
+  throw std::runtime_error("variable or expression is read only");
+}
+
+TypedValuePrototypePtr TypedValuePrototype::getArrayElement(TypedValuePrototypePtr const &index)
+{
+  throw std::runtime_error("Expression or identifier is not subscriptable");
+}
+
 }  // namespace compiler

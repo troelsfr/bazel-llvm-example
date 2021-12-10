@@ -31,9 +31,8 @@ inline TypedValuePtr operator+(TypedValuePrototypePtr const &a, TypedValueProtot
     throw std::runtime_error("Cannot add operands of different types.");
   }
 
-  auto &context = a->builder().getContext();
-  auto  a_val   = a->toValue(&context, a->builder());
-  auto  b_val   = b->toValue(&context, b->builder());
+  auto a_val = a->readValue();
+  auto b_val = b->readValue();
   return TypedValue::create(a->typeId(), a->builder(), a->builder().CreateAdd(a_val, b_val));
 }
 
@@ -44,9 +43,8 @@ inline TypedValuePtr operator*(TypedValuePrototypePtr const &a, TypedValueProtot
     throw std::runtime_error("Cannot multiply operands of different types.");
   }
 
-  auto &context = a->builder().getContext();
-  auto  a_val   = a->toValue(&context, a->builder());
-  auto  b_val   = b->toValue(&context, b->builder());
+  auto a_val = a->readValue();
+  auto b_val = b->readValue();
 
   return TypedValue::create(a->typeId(), a->builder(), a->builder().CreateMul(a_val, b_val));
 }
@@ -58,9 +56,8 @@ inline TypedValuePtr operator==(TypedValuePrototypePtr const &a, TypedValueProto
     throw std::runtime_error("Cannot multiply operands of different types.");
   }
 
-  auto &context = a->builder().getContext();
-  auto  a_val   = a->toValue(&context, a->builder());
-  auto  b_val   = b->toValue(&context, b->builder());
+  auto a_val = a->readValue();
+  auto b_val = b->readValue();
 
   return TypedValue::create(a->typeId(), a->builder(), a->builder().CreateICmpEQ(a_val, b_val));
 }

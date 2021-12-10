@@ -11,21 +11,27 @@ namespace compiler {
 QirProgram::QirProgram()
   : context_{std::make_unique<LlvmContext>()}
   , module_(std::make_unique<LlvmModule>("qir.ll", *context_))
+  , scope_{QirScope::create()}
 {
-  types_["Int8"]  = {llvm::IntegerType::get(*context_, 8), std::type_index(typeid(int8_t)),
-                    sizeof(int8_t)};
-  types_["Int16"] = {llvm::IntegerType::get(*context_, 16), std::type_index(typeid(int16_t)),
-                     sizeof(int16_t)};
-  types_["Int32"] = {llvm::IntegerType::get(*context_, 32), std::type_index(typeid(int32_t)),
-                     sizeof(int32_t)};
-  types_["Int64"] = {llvm::IntegerType::get(*context_, 64), std::type_index(typeid(int64_t)),
-                     sizeof(int64_t)};
-  types_["Void"]  = {llvm::Type::getVoidTy(*context_), std::type_index(typeid(void)),
-                    sizeof(int64_t)};
+  registerType({llvm::IntegerType::get(*context_, 8), std::type_index(typeid(int8_t)),
+                sizeof(int8_t), "Int8"});
+  registerType({llvm::IntegerType::get(*context_, 16), std::type_index(typeid(int16_t)),
+                sizeof(int16_t), "Int16"});
+  registerType({llvm::IntegerType::get(*context_, 32), std::type_index(typeid(int32_t)),
+                sizeof(int32_t), "Int32"});
+  registerType({llvm::IntegerType::get(*context_, 64), std::type_index(typeid(int64_t)),
+                sizeof(int64_t), "Int64"});
+  registerType(
+      {llvm::Type::getVoidTy(*context_), std::type_index(typeid(void)), sizeof(int64_t), "Void"});
 
-  // TODO: Cpp type
-  types_["Qubit"] = {llvm::PointerType::get(llvm::StructType::create(*context_, "Qubit"), 0),
-                     std::type_index(typeid(void)), sizeof(int64_t)};
+  registerType({llvm::PointerType::get(llvm::StructType::create(*context_, "Qubit"), 0),
+                std::type_index(typeid(Qubit)), sizeof(Qubit), "Qubit"});
+}
+
+void QirProgram::registerType(QirType const &type)
+{
+  types_[type.name]                = type;
+  from_native_types_[type.type_id] = type;
 }
 
 QirProgram::~QirProgram()
@@ -54,6 +60,17 @@ QirType QirProgram::getType(String const &name)
   return it->second;
 }
 
+QirType QirProgram::getType(std::type_index const &type_id)
+{
+  auto it = from_native_types_.find(type_id);
+  if (it == from_native_types_.end())
+  {
+    throw std::runtime_error("Type not found.");
+  }
+
+  return it->second;
+}
+
 QirProgram::Type *QirProgram::getLlvmType(String const &name)
 {
   auto it = types_.find(name);
@@ -65,6 +82,7 @@ QirProgram::Type *QirProgram::getLlvmType(String const &name)
   return it->second.value;
 }
 
+/*
 QirBuilderPtr QirProgram::newFunction(String const &name, QirType return_type, Arguments args)
 {
   if (return_type.value == nullptr)
@@ -85,6 +103,16 @@ QirBuilderPtr QirProgram::newFunction(String const &name, QirType return_type, A
 
   auto block = llvm::BasicBlock::Create(*context_, "entry", function);
   return QirBuilder::create(*this, block);
+}
+*/
+
+QirBuilderPtr QirProgram::newFunction(String const &name, String const &return_type,
+                                      ArgTypeNames const &arguments)
+{
+  auto function = getOrDeclareFunction(name, return_type, arguments);
+  llvm::errs() << "Declaring " << name << ": " << *function << "\n";
+  auto block = llvm::BasicBlock::Create(*context_, "entry", function);
+  return QirBuilder::create(*this, scope_->childScope(), block);
 }
 
 QirProgram::String QirProgram::getQir()
@@ -121,9 +149,21 @@ void QirProgram::finalise()
   assert(builders_.size() == 0);
 }
 
-QirProgram::Function *QirProgram::getOrDeclareFunction(String name, String const &return_type,
+FunctionDeclaration QirProgram::getFunctionByLlvmName(String const &name)
+{
+  auto it = function_declaration_cache_.find(name);
+  if (it == function_declaration_cache_.end())
+  {
+    return {nullptr};
+  }
+  return it->second;
+}
+
+QirProgram::Function *QirProgram::getOrDeclareFunction(String const       &name,
+                                                       String const       &return_type,
                                                        ArgTypeNames const &arguments)
 {
+  llvm::errs() << "DECLARING " << name << "\n";
   auto it = function_declaration_cache_.find(name);
   if (it != function_declaration_cache_.end())
   {
@@ -145,10 +185,30 @@ QirProgram::Function *QirProgram::getOrDeclareFunction(String name, String const
 
   llvm::FunctionType *signture = llvm::FunctionType::get(ret_type, args, false);
   decl.function = llvm::Function::Create(signture, llvm::Function::LinkageTypes::ExternalLinkage,
-                                         "__quantum__qis__x__body", *module_);
+                                         name, *module_);
 
   function_declaration_cache_[name] = decl;
   return decl.function;
+}
+
+ConstantIntegerPtr QirProgram::toInt8(llvm::IRBuilder<> &builder, int8_t const &value)
+{
+  return ConstantInteger::createNew<int8_t>(builder, static_cast<uint64_t>(value));
+}
+
+ConstantIntegerPtr QirProgram::toInt16(llvm::IRBuilder<> &builder, int16_t const &value)
+{
+  return ConstantInteger::createNew<int16_t>(builder, static_cast<uint64_t>(value));
+}
+
+ConstantIntegerPtr QirProgram::toInt32(llvm::IRBuilder<> &builder, int32_t const &value)
+{
+  return ConstantInteger::createNew<int32_t>(builder, static_cast<uint64_t>(value));
+}
+
+ConstantIntegerPtr QirProgram::toInt64(llvm::IRBuilder<> &builder, int64_t const &value)
+{
+  return ConstantInteger::createNew<int64_t>(builder, static_cast<uint64_t>(value));
 }
 
 }  // namespace compiler

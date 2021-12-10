@@ -128,6 +128,12 @@ To run all tests, type
 bazel //...
 ```
 
+## Notes
+
+Antlr output in `bazel-out//darwin-fastbuild/bin/qir/cc/parser/generated.inc/toylang/`
+
 ## Things to use
 
 https://github.com/google/EXEgesis/tree/master/exegesis/util
+
+https://stackoverflow.com/questions/48860910/how-to-use-select-to-properly-detect-whether-i-am-building-c-code-in-windows-o

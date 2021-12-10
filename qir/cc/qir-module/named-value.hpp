@@ -34,7 +34,6 @@ public:
       throw std::runtime_error("Cannot implicitly convert types during assignment");
     }
     */
-    // std::cout << "=== ASSIGNING: " << name_ << " = " << other->toString() << std::endl;
     value_ = other;
     return other;
   }

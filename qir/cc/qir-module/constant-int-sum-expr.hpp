@@ -20,8 +20,8 @@ public:
 
   Value *toValue(LLVMContext *context, Builder &builder) const override
   {
-    auto a = lhs_->toValue(context, builder);
-    auto b = rhs_->toValue(context, builder);
+    auto a = lhs_->readValue();
+    auto b = rhs_->readValue();
 
     return builder.CreateAdd(a, b);
   }

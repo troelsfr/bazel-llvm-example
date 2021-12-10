@@ -22,7 +22,6 @@ public:
 
   Value *toValue(LLVMContext * /*context*/, Builder & /*builder*/) const override
   {
-
     return instr_;
   }
 
@@ -31,9 +30,10 @@ public:
     return "MutableHeapVariable";
   }
 
+  /// TODO: Deprecated
   void set(TypedValuePrototypePtr const &value)
   {
-    builder_.CreateStore(value->toValue(qir_program_.context(), builder_), instr_);
+    builder_.CreateStore(value->readValue(), instr_);
   }
 
   TypedValuePtr get()
@@ -42,6 +42,17 @@ public:
         TypedValue::create(type_.type_id, builder_, builder_.CreateLoad(type_.value, instr_));
     return ret;
   }
+  /// TODO: End deprecated
+
+  void writeValue(Value *val) override
+  {
+    builder_.CreateStore(val, instr_);
+  }
+
+  Value *readValue() override
+  {
+    return builder_.CreateLoad(type_.value, instr_);
+  }
 
 private:
   MutableHeapVariable(QirType type, Builder &builder, llvm::Instruction *instr,
@@ -49,13 +60,11 @@ private:
     : TypedValuePrototype(type.type_id, builder)
     , type_{type}
     , instr_{instr}
-    , qir_program_{qir_program}
     , builder_{builder}
   {}
 
   QirType            type_;
   llvm::Instruction *instr_;
-  QirProgram        &qir_program_;
   llvm::IRBuilder<> &builder_;
 };
 using MutableHeapVariablePtr = ValueContianer<MutableHeapVariable>;

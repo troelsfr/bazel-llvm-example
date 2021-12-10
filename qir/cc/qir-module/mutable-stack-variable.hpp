@@ -13,7 +13,7 @@ public:
   using MutableStackVariablePtr = ValueContianer<MutableStackVariable>;
 
   static MutableStackVariablePtr create(QirType type, llvm::IRBuilder<> &builder,
-                                        llvm::AllocaInst *instr, QirProgram &qir_program)
+                                        llvm::Value *instr, QirProgram &qir_program)
   {
     MutableStackVariablePtr ret;
     ret.reset(new MutableStackVariable(type, builder, instr, qir_program));
@@ -31,9 +31,10 @@ public:
     return "MutableStackVariable";
   }
 
+  // TODO: Deprecated
   void set(TypedValuePrototypePtr const &value)
   {
-    builder_.CreateStore(value->toValue(qir_program_.context(), builder_), instr_);
+    builder_.CreateStore(value->readValue(), instr_);
   }
 
   TypedValuePtr get()
@@ -43,20 +44,38 @@ public:
     return ret;
   }
 
+  /// TODO: End deprecated
+
+  void writeValue(Value *val) override
+  {
+    read_cache_ = nullptr;
+    builder_.CreateStore(val, instr_);
+  }
+
+  Value *readValue() override
+  {
+    if (read_cache_ == nullptr)
+    {
+      read_cache_ = builder_.CreateLoad(type_.value, instr_);
+    }
+
+    return read_cache_;
+  }
+
 private:
-  MutableStackVariable(QirType type, Builder &builder, llvm::AllocaInst *instr,
-                       QirProgram &qir_program)
+  MutableStackVariable(QirType type, Builder &builder, llvm::Value *instr, QirProgram &qir_program)
     : TypedValuePrototype(type.type_id, builder)
     , type_{type}
     , instr_{instr}
-    , qir_program_{qir_program}
     , builder_{builder}
   {}
 
-  QirType            type_;
-  llvm::AllocaInst  *instr_;
-  QirProgram        &qir_program_;
+  QirType      type_;
+  llvm::Value *instr_;
+
   llvm::IRBuilder<> &builder_;
+
+  Value *read_cache_{nullptr};
 };
 using MutableStackVariablePtr = ValueContianer<MutableStackVariable>;
 
