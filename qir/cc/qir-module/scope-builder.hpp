@@ -6,8 +6,8 @@
 #include "qir/cc/qir-module/mutable-heap-variable.hpp"
 #include "qir/cc/qir-module/mutable-stack-array.hpp"
 #include "qir/cc/qir-module/mutable-stack-variable.hpp"
-#include "qir/cc/qir-module/qir-program.hpp"
-#include "qir/cc/qir-module/qir-scope.hpp"
+#include "qir/cc/qir-module/scope-register.hpp"
+#include "qir/cc/qir-module/script-builder.hpp"
 #include "qir/cc/qir-module/typed-value-prototype.hpp"
 #include "qir/cc/qir-module/typed-value.hpp"
 
@@ -41,7 +41,7 @@ struct LlvmValue
 class IfStatement;
 using IfStatementPtr = std::shared_ptr<IfStatement>;
 
-class QirBuilder
+class ScopeBuilder
 {
 public:
   using Type               = llvm::Type;
@@ -54,12 +54,13 @@ public:
   using String             = std::string;
   using LlvmFunction       = llvm::Function;
   using LlvmBlock          = llvm::BasicBlock;
-  using QirBuilderPtr      = std::shared_ptr<QirBuilder>;
+  using ScopeBuilderPtr    = std::shared_ptr<ScopeBuilder>;
   using ValueList          = std::vector<TypedValuePrototypePtr>;
   using Builder            = llvm::IRBuilder<>;
   using TerminatorFunction = std::function<void(Builder &)>;
 
-  static QirBuilderPtr create(QirProgram &qir_program, QirScopePtr const &scope, LlvmBlock *block);
+  static ScopeBuilderPtr create(ScriptBuilder &qir_program, ScopeRegisterPtr const &scope,
+                                LlvmBlock *block);
 
   // Quantum operations
   Qubit allocateQubit();
@@ -99,22 +100,23 @@ public:
   IfStatementPtr     ifStatement(TypedValuePrototypePtr const &value);
   llvm::IRBuilder<> &builder();
 
-  QirScope &scope()
+  ScopeRegister &scope()
   {
     return *scope_;
   }
 
   // Destruction and finalisation
   void setTerminatorFunction(TerminatorFunction const &f);
-  ~QirBuilder();
+  ~ScopeBuilder();
   void finalise();
 
 protected:
-  explicit QirBuilder(QirProgram &qir_program, QirScopePtr const &scope, LlvmBlock *block);
-  QirProgram        &qir_program_;
+  explicit ScopeBuilder(ScriptBuilder &qir_program, ScopeRegisterPtr const &scope,
+                        LlvmBlock *block);
+  ScriptBuilder     &qir_program_;
   Builder            builder_;
   LlvmBlock         *block_{nullptr};
-  QirScopePtr        scope_{nullptr};
+  ScopeRegisterPtr   scope_{nullptr};
   TerminatorFunction add_terminator_{nullptr};
   bool               isActive();
 
@@ -134,14 +136,14 @@ private:
   uint64_t                                    qubit_counter_{0};
 };
 
-using QirBuilderPtr = QirBuilder::QirBuilderPtr;
+using ScopeBuilderPtr = ScopeBuilder::ScopeBuilderPtr;
 
-class ElseStatement : public QirBuilder
+class ElseStatement : public ScopeBuilder
 {
 public:
   using ElseStatementPtr = std::shared_ptr<ElseStatement>;
 
-  static ElseStatementPtr create(QirProgram &qir_program, QirScopePtr const &scope,
+  static ElseStatementPtr create(ScriptBuilder &qir_program, ScopeRegisterPtr const &scope,
                                  LlvmBlock *block, LlvmBlock *final_block)
   {
     ElseStatementPtr ret;
@@ -150,9 +152,9 @@ public:
   }
 
 protected:
-  ElseStatement(QirProgram &qir_program, QirScopePtr const &scope, LlvmBlock *block,
+  ElseStatement(ScriptBuilder &qir_program, ScopeRegisterPtr const &scope, LlvmBlock *block,
                 LlvmBlock *final_block)
-    : QirBuilder(qir_program, scope, block)
+    : ScopeBuilder(qir_program, scope, block)
     , final_block_{final_block}
   {
     setTerminatorFunction([final_block](Builder &builder) { builder.CreateBr(final_block); });
@@ -167,8 +169,8 @@ class IfStatement : public ElseStatement
 public:
   using IfStatementPtr = std::shared_ptr<IfStatement>;
 
-  static IfStatementPtr create(QirProgram &qir_program, QirScopePtr const &scope, LlvmBlock *block,
-                               LlvmBlock *final_block)
+  static IfStatementPtr create(ScriptBuilder &qir_program, ScopeRegisterPtr const &scope,
+                               LlvmBlock *block, LlvmBlock *final_block)
   {
     IfStatementPtr ret;
     ret.reset(new IfStatement(qir_program, scope, block, final_block));

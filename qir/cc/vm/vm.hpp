@@ -17,13 +17,6 @@ public:
   }
 };
 
-namespace {
-void test_print_number(int64_t x)
-{
-  std::cout << "XXXXX: " << x << "\n";
-}
-}  // namespace
-
 class JitEngine
 {
 public:
@@ -64,12 +57,18 @@ public:
                      std::make_unique<ConcurrentIRCompiler>(std::move(JTMB)))
     , MainJD(this->ES->createBareJITDylib("<main>"))
   {
+
     /// EXAMPLE: How to dynamically create a runtime
     // See https://stackoverflow.com/questions/57612173/llvm-jit-symbols-not-found?rq=1
+    // Register every symbol that can be accessed from the JIT'ed code.
+    typedef void (*FunctionPtr)(int64_t);
+
+    FunctionPtr printer{[](int64_t x) { std::cout << "FUNCTION POINTER: " << x << "\n"; }};
+
     llvm::orc::SymbolMap M;
     // Register every symbol that can be accessed from the JIT'ed code.
-    M[Mangle("print_number")] = JITEvaluatedSymbol(
-        llvm::pointerToJITTargetAddress(&test_print_number), llvm::JITSymbolFlags());
+    M[Mangle("print_number")] =
+        JITEvaluatedSymbol(llvm::pointerToJITTargetAddress(printer), llvm::JITSymbolFlags());
 
     MainJD.define(absoluteSymbols(M));
     //    MainJD.addGenerator(cantFail(ES->getJITDylibByName("<main>")->define(absoluteSymbols(M))));

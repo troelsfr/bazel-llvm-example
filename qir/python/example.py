@@ -1,6 +1,6 @@
 import pyqir
 
-program = pyqir.QirProgram()
+program = pyqir.ScriptBuilder()
 i8 = program.get_type("Int8")
 i32 = program.get_type("Int32")
 i64 = program.get_type("Int64")

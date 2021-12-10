@@ -1,12 +1,9 @@
 cc_library(
-    name = "qir-module",
+    name = "lib",
     srcs = glob(["*.cpp"]),
     hdrs = glob(["*.hpp"]),    
     visibility = ["//visibility:public"],
     deps = [
-      "//qir/cc/llvm:lib",
-      "//qir/cc/runtime:lib",
-
-      "//qir/rust/logger:logger",
+        "//qir/cc/llvm:lib"
     ],
 )

@@ -1,6 +1,6 @@
 #pragma once
 #include "qir/cc/llvm/llvm.hpp"
-#include "qir/cc/qir-module/qir-program.hpp"
+#include "qir/cc/qir-module/script-builder.hpp"
 
 #include <typeindex>
 #include <unordered_map>
@@ -13,7 +13,7 @@ public:
   using MutableStackVariablePtr = ValueContianer<MutableStackVariable>;
 
   static MutableStackVariablePtr create(QirType type, llvm::IRBuilder<> &builder,
-                                        llvm::Value *instr, QirProgram &qir_program)
+                                        llvm::Value *instr, ScriptBuilder &qir_program)
   {
     MutableStackVariablePtr ret;
     ret.reset(new MutableStackVariable(type, builder, instr, qir_program));
@@ -63,7 +63,8 @@ public:
   }
 
 private:
-  MutableStackVariable(QirType type, Builder &builder, llvm::Value *instr, QirProgram &qir_program)
+  MutableStackVariable(QirType type, Builder &builder, llvm::Value *instr,
+                       ScriptBuilder &qir_program)
     : TypedValuePrototype(type.type_id, builder)
     , type_{type}
     , instr_{instr}

@@ -61,6 +61,13 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 
+// Bitcode output
+#include "llvm/Bitcode/BitcodeWriter.h"
+
+// Reader tool
+#include "llvm/IRReader/IRReader.h"
+#include "llvm/Support/SourceMgr.h"
+
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #endif

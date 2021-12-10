@@ -1,4 +1,4 @@
-#include "qir/cc/qir-module/qir-builder.hpp"
+#include "qir/cc/qir-module/scope-builder.hpp"
 
 #include "qir/cc/qir-module/constant-array.hpp"
 #include "qir/cc/qir-module/constant-int.hpp"
@@ -9,15 +9,16 @@
 extern "C" void log_message(const char *s);
 namespace compiler {
 
-QirBuilderPtr QirBuilder::create(QirProgram &qir_program, QirScopePtr const &scope,
-                                 LlvmBlock *block)
+ScopeBuilderPtr ScopeBuilder::create(ScriptBuilder &qir_program, ScopeRegisterPtr const &scope,
+                                     LlvmBlock *block)
 {
-  QirBuilderPtr ret;
-  ret.reset(new QirBuilder(qir_program, scope, block));
+  ScopeBuilderPtr ret;
+  ret.reset(new ScopeBuilder(qir_program, scope, block));
   return ret;
 }
 
-QirBuilder::QirBuilder(QirProgram &qir_program, QirScopePtr const &scope, LlvmBlock *block)
+ScopeBuilder::ScopeBuilder(ScriptBuilder &qir_program, ScopeRegisterPtr const &scope,
+                           LlvmBlock *block)
   : qir_program_{qir_program}
   , builder_{*qir_program.context()}
   , block_{block}
@@ -29,12 +30,12 @@ QirBuilder::QirBuilder(QirProgram &qir_program, QirScopePtr const &scope, LlvmBl
   builder_.SetInsertPoint(block_);
 }
 
-QirBuilder::~QirBuilder()
+ScopeBuilder::~ScopeBuilder()
 {
   finalise();
 }
 
-TypedValuePtr QirBuilder::call(FunctionDeclaration const &fnc, ValueList const &args)
+TypedValuePtr ScopeBuilder::call(FunctionDeclaration const &fnc, ValueList const &args)
 {
   std::vector<llvm::Value *> llvm_args{};
   for (auto &a : args)
@@ -46,12 +47,12 @@ TypedValuePtr QirBuilder::call(FunctionDeclaration const &fnc, ValueList const &
   return TypedValue::create(return_type.type_id, builder_, llvm_value);
 }
 
-void QirBuilder::returnValue(TypedValuePrototypePtr const &value)
+void ScopeBuilder::returnValue(TypedValuePrototypePtr const &value)
 {
   builder_.CreateRet(value->readValue());
 }
 
-IfStatementPtr QirBuilder::ifStatement(TypedValuePrototypePtr const &value)
+IfStatementPtr ScopeBuilder::ifStatement(TypedValuePrototypePtr const &value)
 {
   auto val = value->readValue();
   auto false_block =
@@ -65,27 +66,27 @@ IfStatementPtr QirBuilder::ifStatement(TypedValuePrototypePtr const &value)
   return IfStatement::create(qir_program_, scope_->childScope(), true_block, false_block);
 }
 
-ConstantIntegerPtr QirBuilder::toInt8(int8_t const &value)
+ConstantIntegerPtr ScopeBuilder::toInt8(int8_t const &value)
 {
   return ConstantInteger::createNew<int8_t>(builder_, static_cast<uint64_t>(value));
 }
 
-ConstantIntegerPtr QirBuilder::toInt16(int16_t const &value)
+ConstantIntegerPtr ScopeBuilder::toInt16(int16_t const &value)
 {
   return ConstantInteger::createNew<int16_t>(builder_, static_cast<uint64_t>(value));
 }
 
-ConstantIntegerPtr QirBuilder::toInt32(int32_t const &value)
+ConstantIntegerPtr ScopeBuilder::toInt32(int32_t const &value)
 {
   return ConstantInteger::createNew<int32_t>(builder_, static_cast<uint64_t>(value));
 }
 
-ConstantIntegerPtr QirBuilder::toInt64(int64_t const &value)
+ConstantIntegerPtr ScopeBuilder::toInt64(int64_t const &value)
 {
   return ConstantInteger::createNew<int64_t>(builder_, static_cast<uint64_t>(value));
 }
 
-ConstantArrayPtr QirBuilder::constantArray(QirType element_type, ValueList const &values)
+ConstantArrayPtr ScopeBuilder::constantArray(QirType element_type, ValueList const &values)
 {
   std::vector<llvm::Constant *> elements;
   for (auto &v : values)
@@ -96,14 +97,14 @@ ConstantArrayPtr QirBuilder::constantArray(QirType element_type, ValueList const
   return ConstantArray::createNew(element_type.type_id, builder_, element_type.value, elements);
 }
 
-MutableStackVariablePtr QirBuilder::newStackVariable(QirType element_type, String const &name)
+MutableStackVariablePtr ScopeBuilder::newStackVariable(QirType element_type, String const &name)
 {
   auto instr = builder_.CreateAlloca(element_type.value, nullptr, name);
   return MutableStackVariable::create(element_type, builder_, instr, qir_program_);
 }
 
-MutableStackArrayPtr QirBuilder::newStackArray(QirType element_type, TypedValuePrototypePtr size,
-                                               String const &name)
+MutableStackArrayPtr ScopeBuilder::newStackArray(QirType element_type, TypedValuePrototypePtr size,
+                                                 String const &name)
 {
   // Stack store
   // https://llvm.org/doxygen/InlineFunction_8cpp_source.html#2251
@@ -111,7 +112,7 @@ MutableStackArrayPtr QirBuilder::newStackArray(QirType element_type, TypedValueP
   return MutableStackArray::create(element_type, builder_, instr, qir_program_);
 }
 
-MutableHeapVariablePtr QirBuilder::newHeapVariable(QirType element_type, String const &name)
+MutableHeapVariablePtr ScopeBuilder::newHeapVariable(QirType element_type, String const &name)
 {
   Type *malloc_arg_type = llvm::Type::getInt64Ty(*qir_program_.context());
   auto  type_size       = toInt64(element_type.size)->toConstant(qir_program_.context(), builder_);
@@ -126,8 +127,8 @@ MutableHeapVariablePtr QirBuilder::newHeapVariable(QirType element_type, String 
   return ret;
 }
 
-MutableHeapArrayPtr QirBuilder::newHeapArray(QirType element_type, TypedValuePrototypePtr size,
-                                             String const &name)
+MutableHeapArrayPtr ScopeBuilder::newHeapArray(QirType element_type, TypedValuePrototypePtr size,
+                                               String const &name)
 {
   Type *malloc_arg_type = llvm::Type::getInt64Ty(*qir_program_.context());
   auto  type_size       = toInt64(element_type.size)->toConstant(qir_program_.context(), builder_);
@@ -143,8 +144,8 @@ MutableHeapArrayPtr QirBuilder::newHeapArray(QirType element_type, TypedValuePro
   return ret;
 }
 
-TypedValuePtr QirBuilder::constantGetElement(ConstantArrayPtr const   &array,
-                                             ConstantIntegerPtr const &index)
+TypedValuePtr ScopeBuilder::constantGetElement(ConstantArrayPtr const   &array,
+                                               ConstantIntegerPtr const &index)
 {
   auto ptr_type = llvm::PointerType::get(array->elementType(), 0);
 
@@ -161,7 +162,7 @@ TypedValuePtr QirBuilder::constantGetElement(ConstantArrayPtr const   &array,
   return ret;
 }
 
-void QirBuilder::setupBuiltIns()
+void ScopeBuilder::setupBuiltIns()
 {
   qubit_allocator_ = qir_program_.getOrDeclareFunction("__quantum__qis__qubit_create", "Qubit");
   quantum_x_ = qir_program_.getOrDeclareFunction("__quantum__qis__x__body", "Void", {"Qubit"});
@@ -170,12 +171,12 @@ void QirBuilder::setupBuiltIns()
       qir_program_.getOrDeclareFunction("__quantum__qis__cnot__body", "Void", {"Qubit", "Qubit"});
 }
 
-bool QirBuilder::isActive()
+bool ScopeBuilder::isActive()
 {
   return block_->getTerminator() == nullptr;
 }
 
-void QirBuilder::requireIsActive()
+void ScopeBuilder::requireIsActive()
 {
   if (!isActive())
   {
@@ -183,7 +184,7 @@ void QirBuilder::requireIsActive()
   }
 }
 
-Qubit QirBuilder::allocateQubit()
+Qubit ScopeBuilder::allocateQubit()
 {
   requireIsActive();
 
@@ -196,7 +197,7 @@ Qubit QirBuilder::allocateQubit()
   return ret;
 }
 
-void QirBuilder::x(Qubit const &q)
+void ScopeBuilder::x(Qubit const &q)
 {
   requireIsActive();
 
@@ -204,7 +205,7 @@ void QirBuilder::x(Qubit const &q)
   builder_.CreateCall(quantum_x_, {arg});
 }
 
-void QirBuilder::z(Qubit const &q)
+void ScopeBuilder::z(Qubit const &q)
 {
   requireIsActive();
 
@@ -212,7 +213,7 @@ void QirBuilder::z(Qubit const &q)
   builder_.CreateCall(quantum_z_, {arg});
 }
 
-void QirBuilder::cnot(Qubit const &q1, Qubit const &q2)
+void ScopeBuilder::cnot(Qubit const &q1, Qubit const &q2)
 {
   requireIsActive();
 
@@ -222,12 +223,12 @@ void QirBuilder::cnot(Qubit const &q1, Qubit const &q2)
   builder_.CreateCall(quantum_cnot_, {arg1, arg2});
 }
 
-llvm::IRBuilder<> &QirBuilder::builder()
+llvm::IRBuilder<> &ScopeBuilder::builder()
 {
   return builder_;
 }
 
-void QirBuilder::finalise()
+void ScopeBuilder::finalise()
 {
   // Note that we need finalise_called_ as isActive may become true
   // during tear down as a result of the terminator being deleted.
@@ -255,7 +256,7 @@ void QirBuilder::finalise()
   finalise_called_ = true;
 }
 
-void QirBuilder::setTerminatorFunction(TerminatorFunction const &f)
+void ScopeBuilder::setTerminatorFunction(TerminatorFunction const &f)
 {
   add_terminator_ = f;
 }

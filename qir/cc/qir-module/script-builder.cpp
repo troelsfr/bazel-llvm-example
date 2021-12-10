@@ -1,17 +1,16 @@
-#include "qir/cc/qir-module/qir-program.hpp"
-
 #include "qir/cc/llvm/llvm.hpp"
-#include "qir/cc/qir-module/qir-builder.hpp"
+#include "qir/cc/qir-module/scope-builder.hpp"
+#include "qir/cc/qir-module/script-builder.hpp"
 
 #include <iostream>
 #include <unordered_map>
 #include <vector>
 namespace compiler {
 
-QirProgram::QirProgram()
+ScriptBuilder::ScriptBuilder()
   : context_{std::make_unique<LlvmContext>()}
   , module_(std::make_unique<LlvmModule>("qir.ll", *context_))
-  , scope_{QirScope::create()}
+  , scope_{ScopeRegister::create()}
 {
   registerType({llvm::IntegerType::get(*context_, 8), std::type_index(typeid(int8_t)),
                 sizeof(int8_t), "Int8"});
@@ -28,28 +27,28 @@ QirProgram::QirProgram()
                 std::type_index(typeid(Qubit)), sizeof(Qubit), "Qubit"});
 }
 
-void QirProgram::registerType(QirType const &type)
+void ScriptBuilder::registerType(QirType const &type)
 {
   types_[type.name]                = type;
   from_native_types_[type.type_id] = type;
 }
 
-QirProgram::~QirProgram()
+ScriptBuilder::~ScriptBuilder()
 {
   finalise();
 }
 
-QirProgram::LlvmContext *QirProgram::context()
+ScriptBuilder::LlvmContext *ScriptBuilder::context()
 {
   return context_.get();
 }
 
-QirProgram::LlvmModule *QirProgram::module()
+ScriptBuilder::LlvmModule *ScriptBuilder::module()
 {
   return module_.get();
 }
 
-QirType QirProgram::getType(String const &name)
+QirType ScriptBuilder::getType(String const &name)
 {
   auto it = types_.find(name);
   if (it == types_.end())
@@ -60,7 +59,7 @@ QirType QirProgram::getType(String const &name)
   return it->second;
 }
 
-QirType QirProgram::getType(std::type_index const &type_id)
+QirType ScriptBuilder::getType(std::type_index const &type_id)
 {
   auto it = from_native_types_.find(type_id);
   if (it == from_native_types_.end())
@@ -71,7 +70,7 @@ QirType QirProgram::getType(std::type_index const &type_id)
   return it->second;
 }
 
-QirProgram::Type *QirProgram::getLlvmType(String const &name)
+ScriptBuilder::Type *ScriptBuilder::getLlvmType(String const &name)
 {
   auto it = types_.find(name);
   if (it == types_.end())
@@ -83,7 +82,7 @@ QirProgram::Type *QirProgram::getLlvmType(String const &name)
 }
 
 /*
-QirBuilderPtr QirProgram::newFunction(String const &name, QirType return_type, Arguments args)
+ScopeBuilderPtr ScriptBuilder::newFunction(String const &name, QirType return_type, Arguments args)
 {
   if (return_type.value == nullptr)
   {
@@ -102,20 +101,20 @@ QirBuilderPtr QirProgram::newFunction(String const &name, QirType return_type, A
       function_signature, llvm::Function::LinkageTypes::ExternalLinkage, name, module_.get());
 
   auto block = llvm::BasicBlock::Create(*context_, "entry", function);
-  return QirBuilder::create(*this, block);
+  return ScopeBuilder::create(*this, block);
 }
 */
 
-QirBuilderPtr QirProgram::newFunction(String const &name, String const &return_type,
-                                      ArgTypeNames const &arguments)
+ScopeBuilderPtr ScriptBuilder::newFunction(String const &name, String const &return_type,
+                                           ArgTypeNames const &arguments)
 {
   auto function = getOrDeclareFunction(name, return_type, arguments);
   llvm::errs() << "Declaring " << name << ": " << *function << "\n";
   auto block = llvm::BasicBlock::Create(*context_, "entry", function);
-  return QirBuilder::create(*this, scope_->childScope(), block);
+  return ScopeBuilder::create(*this, scope_->childScope(), block);
 }
 
-QirProgram::String QirProgram::getQir()
+ScriptBuilder::String ScriptBuilder::getQir()
 {
   finalise();
   // TODO: Move to program
@@ -126,17 +125,17 @@ QirProgram::String QirProgram::getQir()
   return str;
 }
 
-void QirProgram::removeBuilder(QirBuilder *builder)
+void ScriptBuilder::removeBuilder(ScopeBuilder *builder)
 {
   builders_.erase(builder);
 }
 
-void QirProgram::addBuilder(QirBuilder *builder)
+void ScriptBuilder::addBuilder(ScopeBuilder *builder)
 {
   builders_.insert(builder);
 }
 
-void QirProgram::finalise()
+void ScriptBuilder::finalise()
 {
   // We make a copy as calling finalise on the builders
   // will remove them from the list and hence mess the iterators up.
@@ -149,7 +148,7 @@ void QirProgram::finalise()
   assert(builders_.size() == 0);
 }
 
-FunctionDeclaration QirProgram::getFunctionByLlvmName(String const &name)
+FunctionDeclaration ScriptBuilder::getFunctionByLlvmName(String const &name)
 {
   auto it = function_declaration_cache_.find(name);
   if (it == function_declaration_cache_.end())
@@ -159,9 +158,9 @@ FunctionDeclaration QirProgram::getFunctionByLlvmName(String const &name)
   return it->second;
 }
 
-QirProgram::Function *QirProgram::getOrDeclareFunction(String const       &name,
-                                                       String const       &return_type,
-                                                       ArgTypeNames const &arguments)
+ScriptBuilder::Function *ScriptBuilder::getOrDeclareFunction(String const       &name,
+                                                             String const       &return_type,
+                                                             ArgTypeNames const &arguments)
 {
   llvm::errs() << "DECLARING " << name << "\n";
   auto it = function_declaration_cache_.find(name);
@@ -191,22 +190,22 @@ QirProgram::Function *QirProgram::getOrDeclareFunction(String const       &name,
   return decl.function;
 }
 
-ConstantIntegerPtr QirProgram::toInt8(llvm::IRBuilder<> &builder, int8_t const &value)
+ConstantIntegerPtr ScriptBuilder::toInt8(llvm::IRBuilder<> &builder, int8_t const &value)
 {
   return ConstantInteger::createNew<int8_t>(builder, static_cast<uint64_t>(value));
 }
 
-ConstantIntegerPtr QirProgram::toInt16(llvm::IRBuilder<> &builder, int16_t const &value)
+ConstantIntegerPtr ScriptBuilder::toInt16(llvm::IRBuilder<> &builder, int16_t const &value)
 {
   return ConstantInteger::createNew<int16_t>(builder, static_cast<uint64_t>(value));
 }
 
-ConstantIntegerPtr QirProgram::toInt32(llvm::IRBuilder<> &builder, int32_t const &value)
+ConstantIntegerPtr ScriptBuilder::toInt32(llvm::IRBuilder<> &builder, int32_t const &value)
 {
   return ConstantInteger::createNew<int32_t>(builder, static_cast<uint64_t>(value));
 }
 
-ConstantIntegerPtr QirProgram::toInt64(llvm::IRBuilder<> &builder, int64_t const &value)
+ConstantIntegerPtr ScriptBuilder::toInt64(llvm::IRBuilder<> &builder, int64_t const &value)
 {
   return ConstantInteger::createNew<int64_t>(builder, static_cast<uint64_t>(value));
 }

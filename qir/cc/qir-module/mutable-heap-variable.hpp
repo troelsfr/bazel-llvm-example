@@ -1,6 +1,6 @@
 #pragma once
 #include "qir/cc/llvm/llvm.hpp"
-#include "qir/cc/qir-module/qir-program.hpp"
+#include "qir/cc/qir-module/script-builder.hpp"
 
 #include <typeindex>
 #include <unordered_map>
@@ -13,7 +13,7 @@ public:
   using MutableHeapVariablePtr = ValueContianer<MutableHeapVariable>;
 
   static MutableHeapVariablePtr create(QirType type, llvm::IRBuilder<> &builder,
-                                       llvm::Instruction *instr, QirProgram &qir_program)
+                                       llvm::Instruction *instr, ScriptBuilder &qir_program)
   {
     MutableHeapVariablePtr ret;
     ret.reset(new MutableHeapVariable(type, builder, instr, qir_program));
@@ -56,7 +56,7 @@ public:
 
 private:
   MutableHeapVariable(QirType type, Builder &builder, llvm::Instruction *instr,
-                      QirProgram &qir_program)
+                      ScriptBuilder &qir_program)
     : TypedValuePrototype(type.type_id, builder)
     , type_{type}
     , instr_{instr}

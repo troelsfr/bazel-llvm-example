@@ -1,4 +1,4 @@
-#include "qir/cc/qir-module/qir-builder.hpp"
+#include "qir/cc/qir-module/scope-builder.hpp"
 
 #include <pybind11/functional.h>
 #include <pybind11/pybind11.h>
@@ -50,32 +50,32 @@ PYBIND11_MODULE(pyqir, module)
   typed_value.def("__eq__",
                   [](TypedValuePrototypePtr &a, TypedValuePrototypePtr &b) { return a == b; });
 
-  auto builder = py::class_<QirBuilder, QirBuilderPtr>(module, "QirBuilder");
-  builder.def("to_int8", &QirBuilder::toInt8)
-      .def("to_int16", &QirBuilder::toInt16)
-      .def("to_int32", &QirBuilder::toInt32)
-      .def("to_int64", &QirBuilder::toInt64)
-      .def("constant_array", &QirBuilder::constantArray)
-      .def("constant_get_element", &QirBuilder::constantGetElement)
-      .def("return_value", &QirBuilder::returnValue)
-      .def("if_statement", &QirBuilder::ifStatement)
-      .def("new_heap_variable", &QirBuilder::newHeapVariable)
-      .def("new_heap_array", &QirBuilder::newHeapArray)
-      .def("new_stack_variable", &QirBuilder::newStackVariable)
-      .def("new_stack_array", &QirBuilder::newStackArray)
-      .def("allocate_qubit", &QirBuilder::allocateQubit)
-      .def("x", &QirBuilder::x)
-      .def("z", &QirBuilder::z)
-      .def("cnot", &QirBuilder::cnot);
+  auto builder = py::class_<ScopeBuilder, ScopeBuilderPtr>(module, "ScopeBuilder");
+  builder.def("to_int8", &ScopeBuilder::toInt8)
+      .def("to_int16", &ScopeBuilder::toInt16)
+      .def("to_int32", &ScopeBuilder::toInt32)
+      .def("to_int64", &ScopeBuilder::toInt64)
+      .def("constant_array", &ScopeBuilder::constantArray)
+      .def("constant_get_element", &ScopeBuilder::constantGetElement)
+      .def("return_value", &ScopeBuilder::returnValue)
+      .def("if_statement", &ScopeBuilder::ifStatement)
+      .def("new_heap_variable", &ScopeBuilder::newHeapVariable)
+      .def("new_heap_array", &ScopeBuilder::newHeapArray)
+      .def("new_stack_variable", &ScopeBuilder::newStackVariable)
+      .def("new_stack_array", &ScopeBuilder::newStackArray)
+      .def("allocate_qubit", &ScopeBuilder::allocateQubit)
+      .def("x", &ScopeBuilder::x)
+      .def("z", &ScopeBuilder::z)
+      .def("cnot", &ScopeBuilder::cnot);
 
   auto else_stmt = py::class_<ElseStatement, ElseStatementPtr>(module, "ElseStatement", builder);
   auto if_stmt   = py::class_<IfStatement, IfStatementPtr>(module, "IfStatement", else_stmt)
                      .def("else_statement", &IfStatement::elseStatement);
 
-  py::class_<QirProgram>(module, "QirProgram")
+  py::class_<ScriptBuilder>(module, "ScriptBuilder")
       .def(py::init<>())
-      .def("finalise", &QirProgram::finalise)
-      .def("new_function", &QirProgram::newFunction)
-      .def("get_type", &QirProgram::getType)
-      .def("get_qir", &QirProgram::getQir);
+      .def("finalise", &ScriptBuilder::finalise)
+      .def("new_function", &ScriptBuilder::newFunction)
+      .def("get_type", &ScriptBuilder::getType)
+      .def("get_qir", &ScriptBuilder::getQir);
 }

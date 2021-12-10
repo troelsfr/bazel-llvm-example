@@ -4,8 +4,9 @@
 #include "ToyParserVisitor.h"
 #include "antlr4-runtime.h"
 #include "qir/cc/llvm/llvm.hpp"
-#include "qir/cc/qir-module/qir-builder.hpp"
-#include "qir/cc/qir-module/qir-program.hpp"
+#include "qir/cc/qir-module/scope-builder.hpp"
+#include "qir/cc/qir-module/script-builder.hpp"
+#include "qir/cc/runtime/runtime.hpp"
 #include "qir/cc/vm/vm.hpp"
 
 #include <iostream>
@@ -428,7 +429,7 @@ public:
     return visitChildren(ctx);
   }
 
-  void pushFunctionBuilder(QirBuilderPtr const &builder)
+  void pushFunctionBuilder(ScopeBuilderPtr const &builder)
   {
     function_builders_.push_back(builder);
   }
@@ -438,12 +439,12 @@ public:
     function_builders_.pop_back();
   }
 
-  QirProgram &program()
+  ScriptBuilder &program()
   {
     return program_;
   }
 
-  QirBuilderPtr builder()
+  ScopeBuilderPtr builder()
   {
     if (function_builders_.empty())
     {
@@ -453,14 +454,124 @@ public:
   }
 
 private:
-  QirProgram                 program_{};
-  std::vector<QirBuilderPtr> function_builders_{};
+  ScriptBuilder                program_{};
+  std::vector<ScopeBuilderPtr> function_builders_{};
 };
 
-extern "C" void print_number(int64_t n)
+struct Script
 {
-  std::cout << "PRINTING > " << n << " < PRINTING" << std::endl;
-}
+  using LlvmContext = llvm::LLVMContext;
+  using Module      = llvm::Module;
+  using String      = std::string;
+  enum Type
+  {
+    LL_SCRIPT,
+    BC_SCRIPT
+  };
+
+  Type   type{Type::LL_SCRIPT};
+  String name;
+  String payload;
+
+  std::unique_ptr<Module> load(LlvmContext *context) const
+  {
+    llvm::SMDiagnostic error;
+    auto               ret = llvm::parseIR(llvm::MemoryBufferRef(payload, name), error, *context);
+
+    return ret;
+  }
+};
+
+class Compiler
+{
+public:
+  using String = std::string;
+
+  // TODO: In principle the compiler only depends on the runtime definitions and not the runtime
+  // itself
+  Compiler(Runtime &runtime)
+    : runtime_{runtime}
+  {}
+
+  Script compile(String source, Script::Type const &type = Script::Type::LL_SCRIPT)
+  {
+    ANTLRInputStream input(source);
+
+    ToyLexer          lexer(&input);
+    CommonTokenStream tokens(&lexer);
+
+    tokens.fill();
+    ToyParser               parser(&tokens);
+    ToyParser::MainContext *tree = parser.main();
+
+    ToyIrBuilder visitor;
+
+    visitor.program().getOrDeclareFunction("print_number", "Void", {"Int64"});
+    visitor.visitMain(tree);
+
+    // Creating script
+    Script script;
+    script.type                     = type;
+    auto                     module = visitor.program().module();
+    llvm::raw_string_ostream stream(script.payload);
+    if (type == Script::Type::BC_SCRIPT)
+    {
+      llvm::WriteBitcodeToFile(*module, stream);
+    }
+    else
+    {
+      stream << *module;
+    }
+
+    return script;
+  }
+
+private:
+  Runtime &runtime_;
+};
+
+class VM
+{
+public:
+  // TODO: Make runtime copyable?
+  VM(Runtime &runtime)
+    : runtime_{runtime}
+  {}
+
+  void execute(Script const &script)
+  {
+    // Loading the
+    auto context = std::make_unique<llvm::LLVMContext>();
+    auto module  = script.load(context.get());
+
+    //
+    llvm::ExitOnError          exit_on_error;
+    std::unique_ptr<JitEngine> jit_engine = exit_on_error(JitEngine::createNew());
+    module->setDataLayout(jit_engine->getDataLayout());
+
+    auto RT  = jit_engine->getMainJITDylib().createResourceTracker();
+    auto TSM = llvm::orc::ThreadSafeModule(std::move(module), std::move(context));
+    exit_on_error(jit_engine->addModule(std::move(TSM), RT));
+    // TODO: Reinitialize the Runtime thingie InitializeModule();
+
+    // Get the anonymous expression's JITSymbol.
+    auto Sym = exit_on_error(jit_engine->lookup("main"));
+
+    // Get the symbol's address and cast it to the right type (takes no
+    // arguments, returns a double) so we can call it as a native function.
+    llvm::errs() << "Executing program!\n";
+    auto *FP = (int64_t(*)(int64_t))(intptr_t)Sym.getAddress();
+    fprintf(stderr, "Evaluated to %lld\n", FP(1));
+
+    // Delete the anonymous expression module from the JIT.
+    //  llvm::errs() << "Before RT remove\n";
+    exit_on_error(RT->remove());
+    //  llvm::errs() << "Exiting\n";
+  }
+
+private:
+  Runtime &runtime_;
+};
 
 int main(int, const char **)
 {
@@ -468,8 +579,10 @@ int main(int, const char **)
   llvm::InitializeNativeTargetAsmPrinter();
   llvm::InitializeNativeTargetAsmParser();
 
-  ANTLRInputStream input(
-      R"script(
+  Runtime  runtime;
+  Compiler compiler(runtime);
+
+  auto script = compiler.compile(R"script(
 operation test(z: Int64): Int64
 {
   return 382 * z;
@@ -478,32 +591,25 @@ operation test(z: Int64): Int64
 operation main(argc: Int64) : Int64 // Array< String >, Array< Int >
 {
   mutable x : Int64 = 9  + argc;
-  // print_number(x);
+  print_number(x);
   let y = 9 * 2 +  test(x);
   print_number(y);
   let arr = [y,2,3,4];
-  // print_number(arr[0]);
+  print_number(arr[0]);
   arr[1] = 29 + arr[0];
+  print_number(arr[1]);
   arr[3] = arr[1];
+  print_number(arr[3]);
   return arr[3];
-}
-    )script");
-
-  ToyLexer          lexer(&input);
-  CommonTokenStream tokens(&lexer);
-
-  tokens.fill();
-  ToyParser               parser(&tokens);
-  ToyParser::MainContext *tree = parser.main();
-
-  ToyIrBuilder visitor;
-
-  visitor.program().getOrDeclareFunction("print_number", "Void", {"Int64"});
-  visitor.visitMain(tree);
-  llvm::outs() << *visitor.program().module() << "\n";
+})script");
 
   // Running
+  llvm::outs() << script.payload << "\n";
 
+  VM vm(runtime);
+  vm.execute(script);
+
+  /*
   llvm::ExitOnError          exit_on_error;
   std::unique_ptr<JitEngine> jit_engine = exit_on_error(JitEngine::createNew());
   visitor.program().module()->setDataLayout(jit_engine->getDataLayout());
@@ -524,7 +630,9 @@ operation main(argc: Int64) : Int64 // Array< String >, Array< Int >
   fprintf(stderr, "Evaluated to %lld\n", FP(1));
 
   // Delete the anonymous expression module from the JIT.
+  //  llvm::errs() << "Before RT remove\n";
   exit_on_error(RT->remove());
-
+  //  llvm::errs() << "Exiting\n";
+*/
   return 0;
 }

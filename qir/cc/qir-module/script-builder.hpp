@@ -2,8 +2,9 @@
 #include "qir/cc/llvm/llvm.hpp"
 #include "qir/cc/qir-module/constant-int.hpp"
 #include "qir/cc/qir-module/function-declaration.hpp"
-#include "qir/cc/qir-module/qir-scope.hpp"
+#include "qir/cc/qir-module/scope-register.hpp"
 #include "qir/cc/qir-module/typed-value.hpp"
+#include "qir/cc/runtime/runtime-type.hpp"
 
 #include <iostream>
 #include <typeindex>
@@ -12,39 +13,40 @@
 #include <vector>
 namespace compiler {
 
-class QirBuilder;
+class ScopeBuilder;
 
-struct QirType
+struct QirType  // TODO: Replace with concrete runtime type
 {
   using String = std::string;
   using Type   = llvm::Type;
+
   Type           *value{nullptr};
-  std::type_index type_id{std::type_index(typeid(void))};
+  std::type_index type_id{std::type_index(typeid(nullptr_t))};
   int64_t         size{sizeof(int64_t)};
   String          name;
 };
 
-class QirProgram
+class ScriptBuilder
 {
 public:
-  using Type          = llvm::Type;
-  using StructType    = llvm::StructType;
-  using LlvmContext   = llvm::LLVMContext;
-  using LlvmModule    = llvm::Module;
-  using Function      = llvm::Function;
-  using Constant      = llvm::Constant;
-  using ConstantInt   = llvm::ConstantInt;
-  using String        = std::string;
-  using LlvmFunction  = llvm::Function;
-  using LlvmBlock     = llvm::BasicBlock;
-  using Arguments     = std::vector<QirType>;
-  using QirBuilderPtr = std::shared_ptr<QirBuilder>;
-  using Builders      = std::unordered_set<QirBuilder *>;
-  using ArgTypeNames  = FunctionDeclaration::ArgTypeNames;
-  using FunctionCache = std::unordered_map<String, FunctionDeclaration>;
+  using Type            = llvm::Type;
+  using StructType      = llvm::StructType;
+  using LlvmContext     = llvm::LLVMContext;
+  using LlvmModule      = llvm::Module;
+  using Function        = llvm::Function;
+  using Constant        = llvm::Constant;
+  using ConstantInt     = llvm::ConstantInt;
+  using String          = std::string;
+  using LlvmFunction    = llvm::Function;
+  using LlvmBlock       = llvm::BasicBlock;
+  using Arguments       = std::vector<QirType>;
+  using ScopeBuilderPtr = std::shared_ptr<ScopeBuilder>;
+  using Builders        = std::unordered_set<ScopeBuilder *>;
+  using ArgTypeNames    = FunctionDeclaration::ArgTypeNames;
+  using FunctionCache   = std::unordered_map<String, FunctionDeclaration>;
 
-  QirProgram();
-  ~QirProgram();
+  ScriptBuilder();
+  ~ScriptBuilder();
 
   LlvmContext *context();
   LlvmModule  *module();
@@ -54,15 +56,15 @@ public:
 
   Type *getLlvmType(String const &name);
 
-  //  QirBuilderPtr newFunction(String const &name, QirType return_type = QirType(),
+  //  ScopeBuilderPtr newFunction(String const &name, QirType return_type = QirType(),
   //                            Arguments args = Arguments());
-  QirBuilderPtr newFunction(String const &name, String const &return_type = "Void",
-                            ArgTypeNames const &arguments = {});
+  ScopeBuilderPtr newFunction(String const &name, String const &return_type = "Void",
+                              ArgTypeNames const &arguments = {});
 
   String getQir();
 
-  void addBuilder(QirBuilder *builder);
-  void removeBuilder(QirBuilder *builder);
+  void addBuilder(ScopeBuilder *builder);
+  void removeBuilder(ScopeBuilder *builder);
   void finalise();
 
   Function *getOrDeclareFunction(String const &name, String const &return_type = "Void",
@@ -75,7 +77,7 @@ public:
   ConstantIntegerPtr toInt32(llvm::IRBuilder<> &builder, int32_t const &value);
   ConstantIntegerPtr toInt64(llvm::IRBuilder<> &builder, int64_t const &value);
 
-  QirScope &scope()
+  ScopeRegister &scope()
   {
     return *scope_;
   }
@@ -89,8 +91,8 @@ private:
   std::unordered_map<String, QirType>          types_{};
   std::unordered_map<std::type_index, QirType> from_native_types_{};
 
-  Builders    builders_{};
-  QirScopePtr scope_{nullptr};
+  Builders         builders_{};
+  ScopeRegisterPtr scope_{nullptr};
 
   FunctionCache function_declaration_cache_{};
 };

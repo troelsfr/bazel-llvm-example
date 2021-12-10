@@ -8,22 +8,22 @@
 
 namespace compiler {
 
-class QirScope : public std::enable_shared_from_this<QirScope>
+class ScopeRegister : public std::enable_shared_from_this<ScopeRegister>
 {
 public:
   using String                   = std::string;
-  using QirScopePtr              = std::shared_ptr<QirScope>;
+  using ScopeRegisterPtr         = std::shared_ptr<ScopeRegister>;
   using VariablesDeclaredInScope = std::unordered_set<String>;
-  static QirScopePtr create(QirScopePtr parent = nullptr)
+  static ScopeRegisterPtr create(ScopeRegisterPtr parent = nullptr)
   {
-    QirScopePtr ret;
-    ret.reset(new QirScope(parent));
+    ScopeRegisterPtr ret;
+    ret.reset(new ScopeRegister(parent));
     return ret;
   }
 
-  QirScopePtr childScope()
+  ScopeRegisterPtr childScope()
   {
-    return QirScope::create(shared_from_this());
+    return ScopeRegister::create(shared_from_this());
   }
 
   bool has(String const &name)
@@ -54,7 +54,7 @@ public:
   }
 
 private:
-  QirScope(QirScopePtr parent)
+  ScopeRegister(ScopeRegisterPtr parent)
     : parent_{parent}
   {
     if (parent_ != nullptr)
@@ -66,8 +66,8 @@ private:
   std::unordered_set<String>                         used_names_;
   std::unordered_map<String, TypedValuePrototypePtr> named_values_;
 
-  QirScopePtr parent_{nullptr};
+  ScopeRegisterPtr parent_{nullptr};
 };
-using QirScopePtr = QirScope::QirScopePtr;
+using ScopeRegisterPtr = ScopeRegister::ScopeRegisterPtr;
 
 }  // namespace compiler
