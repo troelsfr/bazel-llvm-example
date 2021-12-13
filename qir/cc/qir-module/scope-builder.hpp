@@ -75,18 +75,20 @@ public:
   ConstantIntegerPtr toInt32(int32_t const &value);
   ConstantIntegerPtr toInt64(int64_t const &value);
 
-  ConstantArrayPtr constantArray(QirType element_type, ValueList const &values);
+  ConstantArrayPtr constantArray(TypeDeclaration const &element_type, ValueList const &values);
 
   TypedValuePtr constantGetElement(ConstantArrayPtr const &array, ConstantIntegerPtr const &index);
 
   // Memory allocation
-  MutableStackVariablePtr newStackVariable(QirType element_type, String const &name = "");
-  MutableStackArrayPtr    newStackArray(QirType element_type, TypedValuePrototypePtr size,
-                                        String const &name = "");
+  MutableStackVariablePtr newStackVariable(TypeDeclaration const &element_type,
+                                           String const          &name = "");
+  MutableStackArrayPtr    newStackArray(TypeDeclaration const &element_type,
+                                        TypedValuePrototypePtr size, String const &name = "");
 
-  MutableHeapVariablePtr newHeapVariable(QirType element_type, String const &name = "");
-  MutableHeapArrayPtr    newHeapArray(QirType element_type, TypedValuePrototypePtr size,
-                                      String const &name = "");
+  MutableHeapVariablePtr newHeapVariable(TypeDeclaration const &element_type,
+                                         String const          &name = "");
+  MutableHeapArrayPtr newHeapArray(TypeDeclaration const &element_type, TypedValuePrototypePtr size,
+                                   String const &name = "");
 
   // Arithmetic
 

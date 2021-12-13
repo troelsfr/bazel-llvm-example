@@ -1,6 +1,7 @@
 #pragma once
 #include "qir/cc/llvm/llvm.hpp"
 #include "qir/cc/qir-module/value-container.hpp"
+#include "qir/cc/runtime/runtime-type.hpp"
 
 #include <type_traits>
 #include <typeindex>
@@ -18,7 +19,7 @@ public:
 
   using Assigned = void;
 
-  TypedValuePrototype(std::type_index type_id, llvm::IRBuilder<> &builder);
+  TypedValuePrototype(TypeDeclaration const &type, llvm::IRBuilder<> &builder);
   virtual ~TypedValuePrototype() = default;
 
   virtual Constant *toConstant(LLVMContext *context, Builder &builder) const;
@@ -27,9 +28,9 @@ public:
   virtual std::string toString() const                                      = 0;
   virtual bool        isLhs() const;
 
-  std::type_index typeId() const;
-
-  llvm::IRBuilder<> &builder() const
+  std::type_index        typeId() const;
+  TypeDeclaration const &typeDeclaration() const;
+  llvm::IRBuilder<>     &builder() const
   {
     return builder_;
   }
@@ -40,7 +41,7 @@ public:
   virtual TypedValuePrototypePtr getArrayElement(TypedValuePrototypePtr const &index);
 
 protected:
-  std::type_index    type_id_;
+  TypeDeclaration    type_decl_;
   llvm::IRBuilder<> &builder_;
 
   Value    *value_{nullptr};

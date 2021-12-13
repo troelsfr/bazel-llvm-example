@@ -24,7 +24,8 @@ public:
   using LLVMContext = llvm::LLVMContext;
   using Module      = llvm::Module;
 
-  ToyIrBuilder()
+  ToyIrBuilder(RuntimeDefinition const &runtime_definition)
+    : program_{runtime_definition}
   {}
 
   virtual Any visitMain(ToyParser::MainContext *ctx) override
@@ -81,7 +82,7 @@ public:
     {
       // Adding variable to the scope
       auto arg_type = program_.getType(arg_types[i]);
-      auto arg_ref  = TypedValue::create(arg_type.type_id, builder()->builder(), &arg);
+      auto arg_ref  = TypedValue::create(arg_type, builder()->builder(), &arg);
       builder()->scope().insert(arg_names[i], arg_ref);
 
       arg.setName(arg_names[i++]);
@@ -454,7 +455,7 @@ public:
   }
 
 private:
-  ScriptBuilder                program_{};
+  ScriptBuilder                program_;
   std::vector<ScopeBuilderPtr> function_builders_{};
 };
 
@@ -489,8 +490,8 @@ public:
 
   // TODO: In principle the compiler only depends on the runtime definitions and not the runtime
   // itself
-  Compiler(Runtime &runtime)
-    : runtime_{runtime}
+  Compiler(RuntimeDefinition &runtime_definition)
+    : runtime_definition_{runtime_definition}
   {}
 
   Script compile(String source, Script::Type const &type = Script::Type::LL_SCRIPT)
@@ -504,9 +505,9 @@ public:
     ToyParser               parser(&tokens);
     ToyParser::MainContext *tree = parser.main();
 
-    ToyIrBuilder visitor;
+    ToyIrBuilder visitor(runtime_definition_);
 
-    visitor.program().getOrDeclareFunction("print_number", "Void", {"Int64"});
+    visitor.program().getOrDeclareFunction("print", "Void", {"Int64"});
     visitor.visitMain(tree);
 
     // Creating script
@@ -527,26 +528,30 @@ public:
   }
 
 private:
-  Runtime &runtime_;
+  RuntimeDefinition &runtime_definition_;
 };
 
 class VM
 {
 public:
+  using String = std::string;
+
   // TODO: Make runtime copyable?
   VM(Runtime &runtime)
     : runtime_{runtime}
   {}
 
-  void execute(Script const &script)
+  template <typename R, typename... Args>
+  R execute(Script const &script, String const &name, Args &&...args)
   {
+    typedef R (*CallType)(Args...);
     // Loading the
     auto context = std::make_unique<llvm::LLVMContext>();
     auto module  = script.load(context.get());
 
     //
     llvm::ExitOnError          exit_on_error;
-    std::unique_ptr<JitEngine> jit_engine = exit_on_error(JitEngine::createNew());
+    std::unique_ptr<JitEngine> jit_engine = exit_on_error(JitEngine::createNew(runtime_));
     module->setDataLayout(jit_engine->getDataLayout());
 
     auto RT  = jit_engine->getMainJITDylib().createResourceTracker();
@@ -555,18 +560,19 @@ public:
     // TODO: Reinitialize the Runtime thingie InitializeModule();
 
     // Get the anonymous expression's JITSymbol.
-    auto Sym = exit_on_error(jit_engine->lookup("main"));
+    auto Sym = exit_on_error(jit_engine->lookup(name));
 
     // Get the symbol's address and cast it to the right type (takes no
     // arguments, returns a double) so we can call it as a native function.
-    llvm::errs() << "Executing program!\n";
-    auto *FP = (int64_t(*)(int64_t))(intptr_t)Sym.getAddress();
-    fprintf(stderr, "Evaluated to %lld\n", FP(1));
+
+    auto *function = (CallType)(intptr_t)Sym.getAddress();
+    auto  ret      = function(std::forward<Args>(args)...);
 
     // Delete the anonymous expression module from the JIT.
     //  llvm::errs() << "Before RT remove\n";
     exit_on_error(RT->remove());
     //  llvm::errs() << "Exiting\n";
+    return ret;
   }
 
 private:
@@ -579,7 +585,17 @@ int main(int, const char **)
   llvm::InitializeNativeTargetAsmPrinter();
   llvm::InitializeNativeTargetAsmParser();
 
-  Runtime  runtime;
+  Runtime runtime;
+
+  runtime.defineType<int8_t>("Int8");
+  runtime.defineType<int16_t>("Int16");
+  runtime.defineType<int32_t>("Int32");
+  runtime.defineType<int64_t>("Int64");
+  runtime.defineType<void>("Void");
+
+  runtime.defineType<Qubit>("Qubit");
+  runtime.defineFunction("print", [](int64_t x) -> void { std::cout << "Value: " << x << "\n"; });
+
   Compiler compiler(runtime);
 
   auto script = compiler.compile(R"script(
@@ -591,48 +607,26 @@ operation test(z: Int64): Int64
 operation main(argc: Int64) : Int64 // Array< String >, Array< Int >
 {
   mutable x : Int64 = 9  + argc;
-  print_number(x);
+  print(x);
   let y = 9 * 2 +  test(x);
-  print_number(y);
+//  print(y);
   let arr = [y,2,3,4];
-  print_number(arr[0]);
+//  print(arr[0]);
   arr[1] = 29 + arr[0];
-  print_number(arr[1]);
-  arr[3] = arr[1];
-  print_number(arr[3]);
+  x = arr[1] * 3;
+//  print(arr[1]);
+//  print(x);
+  arr[3] = x;
+//  print(arr[3]);
   return arr[3];
 })script");
 
-  // Running
+  VM   vm(runtime);
+  auto ret = vm.execute<int64_t>(script, "main", 4);
+  llvm::errs() << "Result = " << ret << "\n";
+
+  // Script
   llvm::outs() << script.payload << "\n";
 
-  VM vm(runtime);
-  vm.execute(script);
-
-  /*
-  llvm::ExitOnError          exit_on_error;
-  std::unique_ptr<JitEngine> jit_engine = exit_on_error(JitEngine::createNew());
-  visitor.program().module()->setDataLayout(jit_engine->getDataLayout());
-
-  auto RT  = jit_engine->getMainJITDylib().createResourceTracker();
-  auto TSM = llvm::orc::ThreadSafeModule(std::move(visitor.program().module_),
-                                         std::move(visitor.program().context_));
-  exit_on_error(jit_engine->addModule(std::move(TSM), RT));
-  // TODO: Reinitialize the Runtime thingie InitializeModule();
-
-  // Get the anonymous expression's JITSymbol.
-  auto Sym = exit_on_error(jit_engine->lookup("main"));
-
-  // Get the symbol's address and cast it to the right type (takes no
-  // arguments, returns a double) so we can call it as a native function.
-  llvm::errs() << "Executing program!\n";
-  auto *FP = (int64_t(*)(int64_t))(intptr_t)Sym.getAddress();
-  fprintf(stderr, "Evaluated to %lld\n", FP(1));
-
-  // Delete the anonymous expression module from the JIT.
-  //  llvm::errs() << "Before RT remove\n";
-  exit_on_error(RT->remove());
-  //  llvm::errs() << "Exiting\n";
-*/
   return 0;
 }

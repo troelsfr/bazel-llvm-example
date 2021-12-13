@@ -12,8 +12,8 @@ class MutableHeapArray : public TypedValuePrototype
 public:
   using MutableHeapArrayPtr = ValueContianer<MutableHeapArray>;
 
-  static MutableHeapArrayPtr create(QirType type, Builder &builder, llvm::Instruction *instr,
-                                    ScriptBuilder &qir_program)
+  static MutableHeapArrayPtr create(TypeDeclaration type, Builder &builder,
+                                    llvm::Instruction *instr, ScriptBuilder &qir_program)
   {
     MutableHeapArrayPtr ret;
     ret.reset(new MutableHeapArray(type, builder, instr, qir_program));
@@ -35,27 +35,26 @@ public:
   {
     auto idx = index->readValue();
     auto val = value->readValue();
-    auto ptr = builder_.CreateGEP(type_.value, instr_, idx);
-    TypedValue::create(type_.type_id, builder_, builder_.CreateStore(val, ptr));
+    auto ptr = builder_.CreateGEP(type_decl_.llvm_type, instr_, idx);
+    TypedValue::create(type_decl_, builder_, builder_.CreateStore(val, ptr));
   }
 
   TypedValuePtr get(TypedValuePrototypePtr const &index)
   {
-    auto ptr = builder_.CreateGEP(type_.value, instr_, index->readValue());
-    auto ret = TypedValue::create(type_.type_id, builder_, builder_.CreateLoad(type_.value, ptr));
+    auto ptr = builder_.CreateGEP(type_decl_.llvm_type, instr_, index->readValue());
+    auto ret =
+        TypedValue::create(type_decl_, builder_, builder_.CreateLoad(type_decl_.llvm_type, ptr));
     return ret;
   }
 
 private:
-  MutableHeapArray(QirType type, Builder &builder, llvm::Instruction *instr,
+  MutableHeapArray(TypeDeclaration type, Builder &builder, llvm::Instruction *instr,
                    ScriptBuilder &qir_program)
-    : TypedValuePrototype(type.type_id, builder)
-    , type_{type}
+    : TypedValuePrototype(type, builder)
     , instr_{instr}
     , builder_{builder}
   {}
 
-  QirType            type_;
   llvm::Instruction *instr_;
   llvm::IRBuilder<> &builder_;
 };

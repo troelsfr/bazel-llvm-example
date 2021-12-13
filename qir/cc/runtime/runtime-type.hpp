@@ -9,15 +9,12 @@
 
 namespace compiler {
 
-struct ConcreteRuntimeType
+struct TypeDeclaration
 {
-  using String      = std::string;
-  using Constructor = std::function<void *()>;
-  using Destructor  = std::function<void(void *)>;
-  using IncreaseRef = std::function<void(void *)>;
-  using DecreaseRef = std::function<void(void *)>;
-  using ChangeRef   = std::function<void(void *, int64_t)>;
-  using LlvmType    = llvm::Type;
+  using String        = std::string;
+  using LlvmType      = llvm::Type;
+  using LlvmContext   = llvm::LLVMContext;
+  using LlvmInitiator = std::function<LlvmType *(LlvmContext *, String const &)>;
 
   uint64_t        id{0};
   LlvmType       *llvm_type{nullptr};
@@ -25,6 +22,26 @@ struct ConcreteRuntimeType
   int64_t         size{0};
   String          name{""};
 
+  //
+  LlvmInitiator initiator{nullptr};
+
+  bool isNative() const
+  {
+    return native_type_id != std::type_index(typeid(nullptr_t));
+  }
+};
+
+struct TypeDefinition
+{
+  using Constructor = std::function<void *()>;
+  using Destructor  = std::function<void(void *)>;
+  using IncreaseRef = std::function<void(void *)>;
+  using DecreaseRef = std::function<void(void *)>;
+  using ChangeRef   = std::function<void(void *, int64_t)>;
+
+  uint64_t id{0};
+
+  // TODO: Move to runtime
   // Allocation and freeing
   Constructor constructor{nullptr};
   Destructor  destructor{nullptr};
@@ -33,11 +50,6 @@ struct ConcreteRuntimeType
   IncreaseRef increase_reference_count{nullptr};
   DecreaseRef decrease_reference_count{nullptr};
   ChangeRef   change_reference_count{nullptr};
-
-  bool isNative() const
-  {
-    return native_type_id != std::type_index(typeid(nullptr_t));
-  }
 
   bool isPod() const
   {

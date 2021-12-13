@@ -12,7 +12,7 @@ class MutableStackVariable : public TypedValuePrototype
 public:
   using MutableStackVariablePtr = ValueContianer<MutableStackVariable>;
 
-  static MutableStackVariablePtr create(QirType type, llvm::IRBuilder<> &builder,
+  static MutableStackVariablePtr create(TypeDeclaration type, llvm::IRBuilder<> &builder,
                                         llvm::Value *instr, ScriptBuilder &qir_program)
   {
     MutableStackVariablePtr ret;
@@ -39,8 +39,7 @@ public:
 
   TypedValuePtr get()
   {
-    auto ret =
-        TypedValue::create(type_.type_id, builder_, builder_.CreateLoad(type_.value, instr_));
+    auto ret = TypedValue::create(type_, builder_, builder_.CreateLoad(type_.llvm_type, instr_));
     return ret;
   }
 
@@ -56,23 +55,23 @@ public:
   {
     if (read_cache_ == nullptr)
     {
-      read_cache_ = builder_.CreateLoad(type_.value, instr_);
+      read_cache_ = builder_.CreateLoad(type_.llvm_type, instr_);
     }
 
     return read_cache_;
   }
 
 private:
-  MutableStackVariable(QirType type, Builder &builder, llvm::Value *instr,
+  MutableStackVariable(TypeDeclaration type, Builder &builder, llvm::Value *instr,
                        ScriptBuilder &qir_program)
-    : TypedValuePrototype(type.type_id, builder)
+    : TypedValuePrototype(type, builder)
     , type_{type}
     , instr_{instr}
     , builder_{builder}
   {}
 
-  QirType      type_;
-  llvm::Value *instr_;
+  TypeDeclaration type_;
+  llvm::Value    *instr_;
 
   llvm::IRBuilder<> &builder_;
 

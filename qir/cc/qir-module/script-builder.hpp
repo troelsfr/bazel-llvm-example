@@ -4,7 +4,9 @@
 #include "qir/cc/qir-module/function-declaration.hpp"
 #include "qir/cc/qir-module/scope-register.hpp"
 #include "qir/cc/qir-module/typed-value.hpp"
+#include "qir/cc/runtime/runtime-definition.hpp"
 #include "qir/cc/runtime/runtime-type.hpp"
+#include "qir/cc/runtime/script-builder-interface.hpp"
 
 #include <iostream>
 #include <typeindex>
@@ -15,48 +17,39 @@ namespace compiler {
 
 class ScopeBuilder;
 
-struct QirType  // TODO: Replace with concrete runtime type
-{
-  using String = std::string;
-  using Type   = llvm::Type;
-
-  Type           *value{nullptr};
-  std::type_index type_id{std::type_index(typeid(nullptr_t))};
-  int64_t         size{sizeof(int64_t)};
-  String          name;
-};
-
-class ScriptBuilder
+class ScriptBuilder : public ScriptBuilderInterface
 {
 public:
-  using Type            = llvm::Type;
-  using StructType      = llvm::StructType;
-  using LlvmContext     = llvm::LLVMContext;
-  using LlvmModule      = llvm::Module;
-  using Function        = llvm::Function;
-  using Constant        = llvm::Constant;
-  using ConstantInt     = llvm::ConstantInt;
-  using String          = std::string;
-  using LlvmFunction    = llvm::Function;
-  using LlvmBlock       = llvm::BasicBlock;
-  using Arguments       = std::vector<QirType>;
-  using ScopeBuilderPtr = std::shared_ptr<ScopeBuilder>;
-  using Builders        = std::unordered_set<ScopeBuilder *>;
-  using ArgTypeNames    = FunctionDeclaration::ArgTypeNames;
-  using FunctionCache   = std::unordered_map<String, FunctionDeclaration>;
+  using Type                    = llvm::Type;
+  using StructType              = llvm::StructType;
+  using LlvmContext             = llvm::LLVMContext;
+  using LlvmModule              = llvm::Module;
+  using Function                = llvm::Function;
+  using Constant                = llvm::Constant;
+  using ConstantInt             = llvm::ConstantInt;
+  using String                  = std::string;
+  using LlvmFunction            = llvm::Function;
+  using LlvmBlock               = llvm::BasicBlock;
+  using Arguments               = std::vector<TypeDeclaration>;
+  using ScopeBuilderPtr         = std::shared_ptr<ScopeBuilder>;
+  using Builders                = std::unordered_set<ScopeBuilder *>;
+  using ArgTypeNames            = FunctionDeclaration::ArgTypeNames;
+  using FunctionCache           = std::unordered_map<String, FunctionDeclaration>;
+  using TypeDeclarationRegister = RuntimeDefinition::TypeDeclarationRegister;
 
-  ScriptBuilder();
+  ScriptBuilder(RuntimeDefinition const &runtime_definition);
   ~ScriptBuilder();
 
   LlvmContext *context();
   LlvmModule  *module();
 
-  QirType getType(String const &name);
-  QirType getType(std::type_index const &type_id);
+  TypeDeclaration const &getType(String const &name);
+  TypeDeclaration const &getType(std::type_index const &type_id);
 
   Type *getLlvmType(String const &name);
 
-  //  ScopeBuilderPtr newFunction(String const &name, QirType return_type = QirType(),
+  //  ScopeBuilderPtr newFunction(String const &name, TypeDeclaration return_type =
+  //  TypeDeclaration(),
   //                            Arguments args = Arguments());
   ScopeBuilderPtr newFunction(String const &name, String const &return_type = "Void",
                               ArgTypeNames const &arguments = {});
@@ -67,6 +60,8 @@ public:
   void removeBuilder(ScopeBuilder *builder);
   void finalise();
 
+  void      declareFunction(String const &name, String const &return_type = "Void",
+                            ArgTypeNames const &arguments = {}) override;
   Function *getOrDeclareFunction(String const &name, String const &return_type = "Void",
                                  ArgTypeNames const &arguments = {});
 
@@ -86,10 +81,10 @@ public:
   std::unique_ptr<LlvmModule>  module_{};
 
 private:
-  void registerType(QirType const &type);
+  void registerType(TypeDeclaration const &type);
 
-  std::unordered_map<String, QirType>          types_{};
-  std::unordered_map<std::type_index, QirType> from_native_types_{};
+  TypeDeclarationRegister                              types_{};
+  std::unordered_map<std::type_index, TypeDeclaration> from_native_types_{};
 
   Builders         builders_{};
   ScopeRegisterPtr scope_{nullptr};

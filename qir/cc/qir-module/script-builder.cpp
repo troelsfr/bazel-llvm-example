@@ -1,36 +1,46 @@
+#include "qir/cc/qir-module/script-builder.hpp"
+
 #include "qir/cc/llvm/llvm.hpp"
 #include "qir/cc/qir-module/scope-builder.hpp"
-#include "qir/cc/qir-module/script-builder.hpp"
 
 #include <iostream>
 #include <unordered_map>
 #include <vector>
 namespace compiler {
+/*
+struct TypeDeclaration  // TODO: Replace with concrete runtime type
+{
+  using String = std::string;
+  using Type   = llvm::Type;
 
-ScriptBuilder::ScriptBuilder()
+  Type           *value{nullptr};
+  std::type_index type_id{std::type_index(typeid(nullptr_t))};
+  int64_t         size{sizeof(int64_t)};
+  String          name;
+};
+*/
+
+ScriptBuilder::ScriptBuilder(RuntimeDefinition const &runtime_definition)
   : context_{std::make_unique<LlvmContext>()}
   , module_(std::make_unique<LlvmModule>("qir.ll", *context_))
   , scope_{ScopeRegister::create()}
 {
-  registerType({llvm::IntegerType::get(*context_, 8), std::type_index(typeid(int8_t)),
-                sizeof(int8_t), "Int8"});
-  registerType({llvm::IntegerType::get(*context_, 16), std::type_index(typeid(int16_t)),
-                sizeof(int16_t), "Int16"});
-  registerType({llvm::IntegerType::get(*context_, 32), std::type_index(typeid(int32_t)),
-                sizeof(int32_t), "Int32"});
-  registerType({llvm::IntegerType::get(*context_, 64), std::type_index(typeid(int64_t)),
-                sizeof(int64_t), "Int64"});
-  registerType(
-      {llvm::Type::getVoidTy(*context_), std::type_index(typeid(void)), sizeof(int64_t), "Void"});
-
-  registerType({llvm::PointerType::get(llvm::StructType::create(*context_, "Qubit"), 0),
-                std::type_index(typeid(Qubit)), sizeof(Qubit), "Qubit"});
+  types_ = runtime_definition.typeRegister();
+  for (auto &name_type_pair : types_)
+  {
+    auto &type = name_type_pair.second;
+    if (type.initiator)
+    {
+      type.llvm_type                          = type.initiator(context_.get(), type.name);
+      from_native_types_[type.native_type_id] = type;
+    }
+  }
 }
 
-void ScriptBuilder::registerType(QirType const &type)
+void ScriptBuilder::registerType(TypeDeclaration const &type)
 {
-  types_[type.name]                = type;
-  from_native_types_[type.type_id] = type;
+  types_[type.name]                       = type;
+  from_native_types_[type.native_type_id] = type;
 }
 
 ScriptBuilder::~ScriptBuilder()
@@ -48,7 +58,7 @@ ScriptBuilder::LlvmModule *ScriptBuilder::module()
   return module_.get();
 }
 
-QirType ScriptBuilder::getType(String const &name)
+TypeDeclaration const &ScriptBuilder::getType(String const &name)
 {
   auto it = types_.find(name);
   if (it == types_.end())
@@ -59,12 +69,12 @@ QirType ScriptBuilder::getType(String const &name)
   return it->second;
 }
 
-QirType ScriptBuilder::getType(std::type_index const &type_id)
+TypeDeclaration const &ScriptBuilder::getType(std::type_index const &type_id)
 {
   auto it = from_native_types_.find(type_id);
   if (it == from_native_types_.end())
   {
-    throw std::runtime_error("Type not found.");
+    throw std::runtime_error("Type (getType via type id) not found.");
   }
 
   return it->second;
@@ -78,11 +88,12 @@ ScriptBuilder::Type *ScriptBuilder::getLlvmType(String const &name)
     throw std::runtime_error("Type " + name + " not found.");
   }
 
-  return it->second.value;
+  return it->second.llvm_type;
 }
 
 /*
-ScopeBuilderPtr ScriptBuilder::newFunction(String const &name, QirType return_type, Arguments args)
+ScopeBuilderPtr ScriptBuilder::newFunction(String const &name, TypeDeclaration  return_type,
+Arguments args)
 {
   if (return_type.value == nullptr)
   {
@@ -158,11 +169,39 @@ FunctionDeclaration ScriptBuilder::getFunctionByLlvmName(String const &name)
   return it->second;
 }
 
+void ScriptBuilder::declareFunction(String const &name, String const &return_type,
+                                    ArgTypeNames const &arguments)
+{
+  auto it = function_declaration_cache_.find(name);
+  if (it != function_declaration_cache_.end())
+  {
+    throw std::runtime_error("Function already declared");
+  }
+
+  FunctionDeclaration decl;
+  decl.name           = name;
+  decl.return_type    = return_type;
+  decl.argument_types = arguments;
+
+  auto                ret_type = getLlvmType(return_type);
+  std::vector<Type *> args{};
+  for (auto &a : arguments)
+  {
+    args.push_back(getLlvmType(a));
+  }
+
+  llvm::FunctionType *signture = llvm::FunctionType::get(ret_type, args, false);
+  decl.function = llvm::Function::Create(signture, llvm::Function::LinkageTypes::ExternalLinkage,
+                                         name, *module_);
+
+  function_declaration_cache_[name] = decl;
+}
+
 ScriptBuilder::Function *ScriptBuilder::getOrDeclareFunction(String const       &name,
                                                              String const       &return_type,
                                                              ArgTypeNames const &arguments)
 {
-  llvm::errs() << "DECLARING " << name << "\n";
+
   auto it = function_declaration_cache_.find(name);
   if (it != function_declaration_cache_.end())
   {
@@ -192,22 +231,26 @@ ScriptBuilder::Function *ScriptBuilder::getOrDeclareFunction(String const       
 
 ConstantIntegerPtr ScriptBuilder::toInt8(llvm::IRBuilder<> &builder, int8_t const &value)
 {
-  return ConstantInteger::createNew<int8_t>(builder, static_cast<uint64_t>(value));
+  return ConstantInteger::createNew<int8_t>(getType(std::type_index(typeid(int8_t))), builder,
+                                            static_cast<uint64_t>(value));
 }
 
 ConstantIntegerPtr ScriptBuilder::toInt16(llvm::IRBuilder<> &builder, int16_t const &value)
 {
-  return ConstantInteger::createNew<int16_t>(builder, static_cast<uint64_t>(value));
+  return ConstantInteger::createNew<int16_t>(getType(std::type_index(typeid(int16_t))), builder,
+                                             static_cast<uint64_t>(value));
 }
 
 ConstantIntegerPtr ScriptBuilder::toInt32(llvm::IRBuilder<> &builder, int32_t const &value)
 {
-  return ConstantInteger::createNew<int32_t>(builder, static_cast<uint64_t>(value));
+  return ConstantInteger::createNew<int32_t>(getType(std::type_index(typeid(int32_t))), builder,
+                                             static_cast<uint64_t>(value));
 }
 
 ConstantIntegerPtr ScriptBuilder::toInt64(llvm::IRBuilder<> &builder, int64_t const &value)
 {
-  return ConstantInteger::createNew<int64_t>(builder, static_cast<uint64_t>(value));
+  return ConstantInteger::createNew<int64_t>(getType(std::type_index(typeid(int64_t))), builder,
+                                             static_cast<uint64_t>(value));
 }
 
 }  // namespace compiler

@@ -1,5 +1,6 @@
 #pragma once
 #include "qir/cc/llvm/llvm.hpp"
+#include "qir/cc/runtime/runtime.hpp"
 
 #include <iostream>
 #include <memory>
@@ -46,8 +47,8 @@ public:
   using SymbolStringPool              = llvm::orc::SymbolStringPool;
   using SelfTargetProcessControl      = llvm::orc::SelfTargetProcessControl;
 
-  JitEngine(std::unique_ptr<TargetProcessControl> TPC, std::unique_ptr<ExecutionSession> ES,
-            JITTargetMachineBuilder JTMB, DataLayout DL)
+  JitEngine(Runtime const &runtime, std::unique_ptr<TargetProcessControl> TPC,
+            std::unique_ptr<ExecutionSession> ES, JITTargetMachineBuilder JTMB, DataLayout DL)
     : TPC(std::move(TPC))
     , ES(std::move(ES))
     , DL(std::move(DL))
@@ -63,12 +64,13 @@ public:
     // Register every symbol that can be accessed from the JIT'ed code.
     typedef void (*FunctionPtr)(int64_t);
 
-    FunctionPtr printer{[](int64_t x) { std::cout << "FUNCTION POINTER: " << x << "\n"; }};
-
     llvm::orc::SymbolMap M;
+
     // Register every symbol that can be accessed from the JIT'ed code.
-    M[Mangle("print_number")] =
-        JITEvaluatedSymbol(llvm::pointerToJITTargetAddress(printer), llvm::JITSymbolFlags());
+    for (auto const &fnc : runtime.functionAddresses())
+    {
+      M[Mangle(fnc.first)] = JITEvaluatedSymbol(fnc.second, llvm::JITSymbolFlags());
+    }
 
     MainJD.define(absoluteSymbols(M));
     //    MainJD.addGenerator(cantFail(ES->getJITDylibByName("<main>")->define(absoluteSymbols(M))));
@@ -84,7 +86,7 @@ public:
       ES->reportError(std::move(Err));
   }
 
-  static ExpectedJitEngine createNew()
+  static ExpectedJitEngine createNew(Runtime const &runtime)
   {
     auto SSP = std::make_shared<SymbolStringPool>();
     auto TPC = SelfTargetProcessControl::Create(SSP);
@@ -99,7 +101,7 @@ public:
     if (!DL)
       return DL.takeError();
 
-    return std::make_unique<JitEngine>(std::move(*TPC), std::move(ES), std::move(JTMB),
+    return std::make_unique<JitEngine>(runtime, std::move(*TPC), std::move(ES), std::move(JTMB),
                                        std::move(*DL));
   }
 

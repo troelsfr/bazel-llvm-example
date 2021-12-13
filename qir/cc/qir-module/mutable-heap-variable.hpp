@@ -12,7 +12,7 @@ class MutableHeapVariable : public TypedValuePrototype
 public:
   using MutableHeapVariablePtr = ValueContianer<MutableHeapVariable>;
 
-  static MutableHeapVariablePtr create(QirType type, llvm::IRBuilder<> &builder,
+  static MutableHeapVariablePtr create(TypeDeclaration const &type, llvm::IRBuilder<> &builder,
                                        llvm::Instruction *instr, ScriptBuilder &qir_program)
   {
     MutableHeapVariablePtr ret;
@@ -39,7 +39,7 @@ public:
   TypedValuePtr get()
   {
     auto ret =
-        TypedValue::create(type_.type_id, builder_, builder_.CreateLoad(type_.value, instr_));
+        TypedValue::create(type_decl_, builder_, builder_.CreateLoad(type_decl_.llvm_type, instr_));
     return ret;
   }
   /// TODO: End deprecated
@@ -51,19 +51,18 @@ public:
 
   Value *readValue() override
   {
-    return builder_.CreateLoad(type_.value, instr_);
+    return builder_.CreateLoad(type_decl_.llvm_type, instr_);
   }
 
 private:
-  MutableHeapVariable(QirType type, Builder &builder, llvm::Instruction *instr,
+  MutableHeapVariable(TypeDeclaration const &type, Builder &builder, llvm::Instruction *instr,
                       ScriptBuilder &qir_program)
-    : TypedValuePrototype(type.type_id, builder)
-    , type_{type}
+    : TypedValuePrototype(type, builder)
     , instr_{instr}
     , builder_{builder}
   {}
 
-  QirType            type_;
+  //  TypeDeclaration    type_decl_;
   llvm::Instruction *instr_;
   llvm::IRBuilder<> &builder_;
 };

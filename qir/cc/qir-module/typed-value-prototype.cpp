@@ -6,8 +6,9 @@
 #include <typeindex>
 namespace compiler {
 
-TypedValuePrototype::TypedValuePrototype(std::type_index type_id, llvm::IRBuilder<> &builder)
-  : type_id_{type_id}
+TypedValuePrototype::TypedValuePrototype(TypeDeclaration const &type_decl,
+                                         llvm::IRBuilder<>     &builder)
+  : type_decl_{type_decl}
   , builder_{builder}
 {}
 
@@ -24,7 +25,12 @@ bool TypedValuePrototype::isLhs() const
 
 std::type_index TypedValuePrototype::typeId() const
 {
-  return type_id_;
+  return type_decl_.native_type_id;
+}
+
+TypeDeclaration const &TypedValuePrototype::typeDeclaration() const
+{
+  return type_decl_;
 }
 
 TypedValuePrototype::Value *TypedValuePrototype::readValue()

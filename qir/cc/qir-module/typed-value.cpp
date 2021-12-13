@@ -7,11 +7,11 @@
 #include <typeindex>
 namespace compiler {
 
-TypedValuePtr TypedValue::create(std::type_index type_id, llvm::IRBuilder<> &builder,
+TypedValuePtr TypedValue::create(TypeDeclaration const &type_decl, llvm::IRBuilder<> &builder,
                                  llvm::Value *value)
 {
   TypedValuePtr ret;
-  ret.reset(new TypedValue(type_id, builder, value));
+  ret.reset(new TypedValue(type_decl, builder, value));
   return ret;
 }
 
@@ -25,8 +25,9 @@ std::string TypedValue::toString() const
   return "Value";
 }
 
-TypedValue::TypedValue(std::type_index type_id, llvm::IRBuilder<> &builder, llvm::Value *value)
-  : TypedValuePrototype(type_id, builder)
+TypedValue::TypedValue(TypeDeclaration const &type_decl, llvm::IRBuilder<> &builder,
+                       llvm::Value *value)
+  : TypedValuePrototype(type_decl, builder)
   , value_{value}
 {}
 

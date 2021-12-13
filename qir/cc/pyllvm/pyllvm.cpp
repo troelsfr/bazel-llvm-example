@@ -7,17 +7,17 @@
 namespace py = pybind11;
 PYBIND11_DECLARE_HOLDER_TYPE(T, compiler::ValueContianer<T>);
 
-PYBIND11_MODULE(pyqir, module)
+PYBIND11_MODULE(pyllvm, module)
 {
   // https://stackoverflow.com/questions/20944533/when-should-i-use-constantdataarray-versus-constantarray
   // https://www.stephendiehl.com/llvm/
   //  py::class_<Function>(module, "Function").def(py::init<std::string>()).def("body",
   //  Function::body);
 
-  module.doc() = "pyqir";
+  module.doc() = "pyllvm";
   using namespace compiler;
 
-  py::class_<QirType>(module, "QirType");
+  py::class_<TypeDeclarationRegister>(module, "TypeDeclarationRegister");
 
   py::class_<Qubit>(module, "Qubit");
   auto typed_value =

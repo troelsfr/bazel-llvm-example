@@ -54,20 +54,20 @@ class ConstantInteger : public TypedValuePrototype
 {
 public:
   template <typename T>
-  static ValueContianer<ConstantInteger> createNew(llvm::IRBuilder<> &builder, T value = 0)
+  static ValueContianer<ConstantInteger> createNew(TypeDeclaration const &type_decl,
+                                                   llvm::IRBuilder<> &builder, T value = 0)
   {
     ValueContianer<ConstantInteger> ret;
-    ret.reset(new ConstantInteger(std::type_index(typeid(T)), builder,
-                                  details::BitCounter<T>::value(), value));
+    ret.reset(new ConstantInteger(type_decl, builder, details::BitCounter<T>::value(), value));
     return ret;
   }
 
-  static ValueContianer<ConstantInteger> createNew(std::type_index    type_id,
+  static ValueContianer<ConstantInteger> createNew(TypeDeclaration const &type_decl,
                                                    llvm::IRBuilder<> &builder, uint32_t bits,
                                                    uint64_t value = 0)
   {
     ValueContianer<ConstantInteger> ret;
-    ret.reset(new ConstantInteger(type_id, builder, bits, value));
+    ret.reset(new ConstantInteger(type_decl, builder, bits, value));
     return ret;
   }
   virtual ~ConstantInteger() = default;
@@ -97,9 +97,9 @@ public:
   }
 
 protected:
-  ConstantInteger(std::type_index type_id, llvm::IRBuilder<> &builder, uint32_t bits,
+  ConstantInteger(TypeDeclaration const &type_decl, llvm::IRBuilder<> &builder, uint32_t bits,
                   uint64_t value = 0)
-    : TypedValuePrototype(type_id, builder)
+    : TypedValuePrototype(type_decl, builder)
     , bits_{bits}
     , value_{value}
   {}

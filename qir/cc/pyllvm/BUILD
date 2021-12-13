@@ -1,8 +1,8 @@
 load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 
 pybind_extension(
-    name = "pyqir",
-    srcs = glob(["pyqir.cpp"]),
+    name = "pyllvm",
+    srcs = glob(["pyllvm.cpp"]),
     deps=[
       "//qir/cc/qir-module:qir-module",
     ],
@@ -11,9 +11,9 @@ pybind_extension(
 
 
 py_library(
-    name = "pyqir",
-    imports = [ ":pyqir.so" ],
-    data = [":pyqir.so",],
+    name = "pyllvm",
+    imports = [ ":pyllvm.so" ],
+    data = [":pyllvm.so",],
     visibility = [
         "//visibility:public",
     ],

@@ -6,7 +6,7 @@ py_binary(
     srcs =["example.py"],
     main = "example.py",
     deps = [
-        "//qir/cc/pyqir:pyqir",
+        "//qir/cc/pyllvm:pyllvm",
     ],
     data = [ ],
     args = [ ],

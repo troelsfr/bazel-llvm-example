@@ -12,13 +12,13 @@ class TypedValue : public TypedValuePrototype
 public:
   using TypedValuePtr = ValueContianer<TypedValue>;
 
-  static TypedValuePtr create(std::type_index type_id, llvm::IRBuilder<> &builder,
+  static TypedValuePtr create(TypeDeclaration const &type_decl, llvm::IRBuilder<> &builder,
                               llvm::Value *value);
   Value               *toValue(LLVMContext *context, Builder &builder) const override;
   std::string          toString() const override;
 
 private:
-  TypedValue(std::type_index type_id, llvm::IRBuilder<> &builder, llvm::Value *value);
+  TypedValue(TypeDeclaration const &type_decl, llvm::IRBuilder<> &builder, llvm::Value *value);
 
   llvm::Value *value_;
 };
@@ -33,7 +33,8 @@ inline TypedValuePtr operator+(TypedValuePrototypePtr const &a, TypedValueProtot
 
   auto a_val = a->readValue();
   auto b_val = b->readValue();
-  return TypedValue::create(a->typeId(), a->builder(), a->builder().CreateAdd(a_val, b_val));
+  return TypedValue::create(a->typeDeclaration(), a->builder(),
+                            a->builder().CreateAdd(a_val, b_val));
 }
 
 inline TypedValuePtr operator*(TypedValuePrototypePtr const &a, TypedValuePrototypePtr const &b)
@@ -46,7 +47,8 @@ inline TypedValuePtr operator*(TypedValuePrototypePtr const &a, TypedValueProtot
   auto a_val = a->readValue();
   auto b_val = b->readValue();
 
-  return TypedValue::create(a->typeId(), a->builder(), a->builder().CreateMul(a_val, b_val));
+  return TypedValue::create(a->typeDeclaration(), a->builder(),
+                            a->builder().CreateMul(a_val, b_val));
 }
 
 inline TypedValuePtr operator==(TypedValuePrototypePtr const &a, TypedValuePrototypePtr const &b)
@@ -59,6 +61,7 @@ inline TypedValuePtr operator==(TypedValuePrototypePtr const &a, TypedValueProto
   auto a_val = a->readValue();
   auto b_val = b->readValue();
 
-  return TypedValue::create(a->typeId(), a->builder(), a->builder().CreateICmpEQ(a_val, b_val));
+  return TypedValue::create(a->typeDeclaration(), a->builder(),
+                            a->builder().CreateICmpEQ(a_val, b_val));
 }
 }  // namespace compiler

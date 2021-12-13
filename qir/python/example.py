@@ -1,6 +1,6 @@
-import pyqir
+import pyllvm
 
-program = pyqir.ScriptBuilder()
+program = pyllvm.ScriptBuilder()
 i8 = program.get_type("Int8")
 i32 = program.get_type("Int32")
 i64 = program.get_type("Int64")

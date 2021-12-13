@@ -19,16 +19,17 @@ public:
 
     // ConstantArray::get
     ValueContianer<ConstantArray> ret;
-    ret.reset(new ConstantArray(std::type_index(typeid(T)), builder, element_type, values));
+    // TODO: ret.reset(new ConstantArray(std::type_index(typeid(T)), builder, element_type,
+    // values));
     return ret;
   }
 
-  static ValueContianer<ConstantArray> createNew(std::type_index    type_id,
-                                                 llvm::IRBuilder<> &builder,
+  static ValueContianer<ConstantArray> createNew(TypeDeclaration const &type_decl,
+                                                 llvm::IRBuilder<>     &builder,
                                                  llvm::Type *element_type, ValueList const &values)
   {
     ValueContianer<ConstantArray> ret;
-    ret.reset(new ConstantArray(type_id, builder, element_type, values));
+    ret.reset(new ConstantArray(type_decl, builder, element_type, values));
     return ret;
   }
   virtual ~ConstantArray() = default;
@@ -68,9 +69,9 @@ public:
   }
 
 protected:
-  ConstantArray(std::type_index type_id, llvm::IRBuilder<> &builder, llvm::Type *element_type,
-                ValueList const &values)
-    : TypedValuePrototype(type_id, builder)
+  ConstantArray(TypeDeclaration const &type_decl, llvm::IRBuilder<> &builder,
+                llvm::Type *element_type, ValueList const &values)
+    : TypedValuePrototype(type_decl, builder)
     , element_type_{element_type}
     , values_{values}
     , type_{llvm::ArrayType::get(element_type_, values_.size())}
