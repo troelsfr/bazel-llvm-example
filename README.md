@@ -1,10 +1,69 @@
-# Svadilfari - LLVM builder for Python
+# Svadilfari - LLVM builder for Python and C++
 
 The aim of this project is to provide a framework for rapid LLVM prototyping. The project is named Svaðilfari after the stallion that made it possible to build a wall around Asgard in just one winter. The project is written in C++ and is based on LLVM, Pybind11 and Python.
 
 ## Prerequisite
 
-Install bazel version 3.5.0. Bazel is available on Windows via [chocolatey](https://community.chocolatey.org/packages/bazel) and Windows instructions can be found [here](https://docs.bazel.build/versions/main/install-windows.html). However, this is untested.
+Install bazel version 3.5.0. Bazel is available on Windows via [chocolatey](https://community.chocolatey.org/packages/bazel) and Windows instructions can be found [here](https://docs.bazel.build/versions/main/install-windows.html). All other dependencies are automatically downloaded and built by Bazel as part of the compilation process.
+
+## Purpose
+
+The purpose of this library is to enable rapid prototyping for LLVM frontends and runtime using either the Python or C++ interface.
+By constructing a framework for rapid prototyping the barrier to construct experiments with LLVM is substantially lowered.
+In a nutshell, any prototype consists of a runtime, a compiler, a script optimiser and a VM to execute the code.
+
+### Defining a runtime
+
+In Python you can define a runtime as:
+
+```python
+rt = Runtime()
+rt.define_type(PrimitiveTypes.Int64, "Int64")
+rt.define_type(PrimitiveTypes.Void, "Unit")
+rt.declare_function("__quantum__qis__cnot__body", "Int8", ["Int8"])
+```
+
+Currently the Python API does not allow to attach the runtime implementation whereas the C++ interface does:
+
+```c++
+  Runtime rt;
+  rt.defineType<int64_t>("Int64");
+  runtime.defineType<void>("Unit");
+
+  // Declaring and defining a function
+  runtime.defineFunction("print",
+                         [](int64_t x) -> void { std::cout << "Value: " << x << "\n"; });
+
+  // Only declaring
+  runtime.declareFunction<void, double>("printDouble");
+```
+
+When defining a function, the runtime will make it available directly in VM without further implementation needed.
+
+### Creating a script
+
+This framework provides a lot of tools to allow the developer to create executable LLVM scripts.
+
+```python
+program = ScriptBuilder(rt)
+test_builder = program.new_function("Test", "Unit", [])
+x = test_builder.to_int64(127)
+hello = test_builder.new_stack_variable(i64, "hello")
+hello.set(x)
+test_builder.return_value(x.get())
+```
+
+The Python API for building scripts is still experimental and will likely undergo heavy changes.
+
+### Running the VM
+
+Once a program was created, we can test the script together with the runtime using the built-in VM:
+
+```
+vm = VM(rt)
+script = program.make_script()
+vm.execute(script, "Test")
+```
 
 ## How to run the example
 
