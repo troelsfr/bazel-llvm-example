@@ -3,7 +3,7 @@
 // Licensed under the MIT License.
 
 #include "svadilfari/cc/llvm/llvm.hpp"
-#include "svadilfari/cc/qir-module/typed-value-prototype.hpp"
+#include "svadilfari/cc/script-builder/typed-value-prototype.hpp"
 
 #include <type_traits>
 #include <typeindex>
@@ -39,10 +39,6 @@ public:
 
   Constant *toConstant(LLVMContext *context, Builder &builder) const override
   {
-    for (auto const &v : values_)
-    {
-      llvm::errs() << " - " << *v << "\n";
-    }
     auto module = builder.GetInsertBlock()->getModule();
     auto c = llvm::ConstantArray::get(llvm::ArrayType::get(element_type_, values_.size()), values_);
     return new llvm::GlobalVariable(*module, type_, true, llvm::GlobalValue::InternalLinkage, c,

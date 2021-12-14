@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-#include "svadilfari/cc/qir-module/typed-value-prototype.hpp"
+#include "svadilfari/cc/script-builder/typed-value-prototype.hpp"
 
 #include "svadilfari/cc/llvm/llvm.hpp"
 

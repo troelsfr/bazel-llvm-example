@@ -1,4 +1,4 @@
-#include "svadilfari/cc/qir-module/scope-builder.hpp"
+#include "svadilfari/cc/script-builder/scope-builder.hpp"
 
 #include <iostream>
 

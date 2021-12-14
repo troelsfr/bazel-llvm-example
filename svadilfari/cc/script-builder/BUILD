@@ -1,5 +1,5 @@
 cc_library(
-    name = "qir-module",
+    name = "script-builder",
     srcs = glob(["*.cpp"]),
     hdrs = glob(["*.hpp"]),    
     visibility = ["//visibility:public"],

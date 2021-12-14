@@ -1,10 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-#include "svadilfari/cc/qir-module/script-builder.hpp"
+#include "svadilfari/cc/script-builder/script-builder.hpp"
 
 #include "svadilfari/cc/llvm/llvm.hpp"
-#include "svadilfari/cc/qir-module/scope-builder.hpp"
+#include "svadilfari/cc/script-builder/scope-builder.hpp"
 
 #include <iostream>
 #include <unordered_map>
@@ -117,7 +117,7 @@ ScopeBuilderPtr ScriptBuilder::newFunction(String const &name, String const &ret
                                            ArgTypeNames const &arguments)
 {
   auto function = getOrDeclareFunction(name, return_type, arguments);
-  llvm::errs() << "Declaring " << name << ": " << *function << "\n";
+
   auto block = llvm::BasicBlock::Create(*context_, "entry", function);
   return ScopeBuilder::create(*this, scope_->childScope(), block);
 }

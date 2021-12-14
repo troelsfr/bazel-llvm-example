@@ -4,7 +4,7 @@ cc_test(
     srcs = ["test.cpp"],
     visibility = ["//visibility:public"],
     deps = [
-      "//svadilfari/cc/qir-module:qir-module",
+      "//svadilfari/cc/script-builder:script-builder",
       "//svadilfari/rust/logger:logger",      
     ],
     args = [],

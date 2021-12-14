@@ -3,7 +3,7 @@
 // Licensed under the MIT License.
 
 #include "svadilfari/cc/llvm/llvm.hpp"
-#include "svadilfari/cc/qir-module/typed-value-prototype.hpp"
+#include "svadilfari/cc/script-builder/typed-value-prototype.hpp"
 
 #include <memory>
 #include <unordered_map>

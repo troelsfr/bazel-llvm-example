@@ -3,8 +3,8 @@
 // Licensed under the MIT License.
 
 #include "svadilfari/cc/llvm/llvm.hpp"
-#include "svadilfari/cc/qir-module/mutable-stack-variable.hpp"
-#include "svadilfari/cc/qir-module/script-builder.hpp"
+#include "svadilfari/cc/script-builder/mutable-stack-variable.hpp"
+#include "svadilfari/cc/script-builder/script-builder.hpp"
 
 #include <typeindex>
 #include <unordered_map>

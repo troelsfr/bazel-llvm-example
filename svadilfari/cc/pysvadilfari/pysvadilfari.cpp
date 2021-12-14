@@ -1,8 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-#include "svadilfari/cc/qir-module/scope-builder.hpp"
 #include "svadilfari/cc/runtime/runtime.hpp"
+#include "svadilfari/cc/script-builder/scope-builder.hpp"
 #include "svadilfari/cc/vm/script.hpp"
 #include "svadilfari/cc/vm/vm.hpp"
 

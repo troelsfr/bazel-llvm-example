@@ -74,8 +74,9 @@ public:
       M[Mangle(fnc.first)] = JITEvaluatedSymbol(fnc.second, llvm::JITSymbolFlags());
     }
 
+    // TODO: Figure out how make this not warn
     MainJD.define(absoluteSymbols(M));
-    //    MainJD.addGenerator(cantFail(ES->getJITDylibByName("<main>")->define(absoluteSymbols(M))));
+    // MainJD.addGenerator(cantFail(ES->getJITDylibByName("<main>")->define(absoluteSymbols(M))));
     /// END OF EXAMPLE
 
     MainJD.addGenerator(

@@ -50,9 +50,9 @@ public:
     auto  ret      = function(std::forward<Args>(args)...);
 
     // Delete the anonymous expression module from the JIT.
-    //  llvm::errs() << "Before RT remove\n";
+
     exit_on_error(RT->remove());
-    //  llvm::errs() << "Exiting\n";
+
     return ret;
   }
 

@@ -28,7 +28,7 @@ cc_binary(
     deps = [ 
       ":lib",      
       "//svadilfari/cc/llvm:lib",
-      "//svadilfari/cc/qir-module:qir-module",
+      "//svadilfari/cc/script-builder:script-builder",
       "//svadilfari/cc/vm:lib",
 
       "@antlr4_runtimes//:cpp",

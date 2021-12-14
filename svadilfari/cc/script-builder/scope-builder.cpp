@@ -1,10 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-#include "svadilfari/cc/qir-module/scope-builder.hpp"
+#include "svadilfari/cc/script-builder/scope-builder.hpp"
 
-#include "svadilfari/cc/qir-module/constant-array.hpp"
-#include "svadilfari/cc/qir-module/constant-int.hpp"
+#include "svadilfari/cc/script-builder/constant-array.hpp"
+#include "svadilfari/cc/script-builder/constant-int.hpp"
 
 #include <iostream>
 #include <vector>

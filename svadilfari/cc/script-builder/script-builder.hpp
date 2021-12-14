@@ -3,13 +3,13 @@
 // Licensed under the MIT License.
 
 #include "svadilfari/cc/llvm/llvm.hpp"
-#include "svadilfari/cc/qir-module/constant-int.hpp"
-#include "svadilfari/cc/qir-module/function-declaration.hpp"
-#include "svadilfari/cc/qir-module/scope-register.hpp"
-#include "svadilfari/cc/qir-module/typed-value.hpp"
 #include "svadilfari/cc/runtime/runtime-definition.hpp"
 #include "svadilfari/cc/runtime/runtime-type.hpp"
 #include "svadilfari/cc/runtime/script-builder-interface.hpp"
+#include "svadilfari/cc/script-builder/constant-int.hpp"
+#include "svadilfari/cc/script-builder/function-declaration.hpp"
+#include "svadilfari/cc/script-builder/scope-register.hpp"
+#include "svadilfari/cc/script-builder/typed-value.hpp"
 #include "svadilfari/cc/vm/script.hpp"
 
 #include <iostream>

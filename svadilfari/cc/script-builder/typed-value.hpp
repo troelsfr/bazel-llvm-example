@@ -3,8 +3,8 @@
 // Licensed under the MIT License.
 
 #include "svadilfari/cc/llvm/llvm.hpp"
-#include "svadilfari/cc/qir-module/typed-value-prototype.hpp"
-#include "svadilfari/cc/qir-module/value-container.hpp"
+#include "svadilfari/cc/script-builder/typed-value-prototype.hpp"
+#include "svadilfari/cc/script-builder/value-container.hpp"
 
 #include <type_traits>
 #include <typeindex>

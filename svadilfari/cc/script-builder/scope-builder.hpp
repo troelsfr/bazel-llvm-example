@@ -3,16 +3,16 @@
 // Licensed under the MIT License.
 
 #include "svadilfari/cc/llvm/llvm.hpp"
-#include "svadilfari/cc/qir-module/constant-array.hpp"
-#include "svadilfari/cc/qir-module/constant-int.hpp"
-#include "svadilfari/cc/qir-module/mutable-heap-array.hpp"
-#include "svadilfari/cc/qir-module/mutable-heap-variable.hpp"
-#include "svadilfari/cc/qir-module/mutable-stack-array.hpp"
-#include "svadilfari/cc/qir-module/mutable-stack-variable.hpp"
-#include "svadilfari/cc/qir-module/scope-register.hpp"
-#include "svadilfari/cc/qir-module/script-builder.hpp"
-#include "svadilfari/cc/qir-module/typed-value-prototype.hpp"
-#include "svadilfari/cc/qir-module/typed-value.hpp"
+#include "svadilfari/cc/script-builder/constant-array.hpp"
+#include "svadilfari/cc/script-builder/constant-int.hpp"
+#include "svadilfari/cc/script-builder/mutable-heap-array.hpp"
+#include "svadilfari/cc/script-builder/mutable-heap-variable.hpp"
+#include "svadilfari/cc/script-builder/mutable-stack-array.hpp"
+#include "svadilfari/cc/script-builder/mutable-stack-variable.hpp"
+#include "svadilfari/cc/script-builder/scope-register.hpp"
+#include "svadilfari/cc/script-builder/script-builder.hpp"
+#include "svadilfari/cc/script-builder/typed-value-prototype.hpp"
+#include "svadilfari/cc/script-builder/typed-value.hpp"
 
 #include <functional>
 #include <iostream>

@@ -4,7 +4,7 @@ pybind_extension(
     name = "pysvadilfari",
     srcs = glob(["pysvadilfari.cpp"]),
     deps=[
-      "//svadilfari/cc/qir-module:qir-module",
+      "//svadilfari/cc/script-builder:script-builder",
       "//svadilfari/cc/runtime:lib",
       "//svadilfari/cc/vm:lib",
     ],

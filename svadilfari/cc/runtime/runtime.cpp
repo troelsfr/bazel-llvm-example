@@ -14,6 +14,6 @@ void Runtime::initPlatform()
   llvm::InitializeNativeTargetAsmPrinter();
   llvm::InitializeNativeTargetAsmParser();
 
-  defineFunction("print", [](int64_t n) { std::cout << "PRINTER: " << n << std::endl; });
+  defineFunction("print", [](int64_t n) { std::cout << "; PRINTER: " << n << std::endl; });
 }
 }  // namespace compiler

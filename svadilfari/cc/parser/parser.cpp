@@ -7,9 +7,9 @@
 #include "ToyParserVisitor.h"
 #include "antlr4-runtime.h"
 #include "svadilfari/cc/llvm/llvm.hpp"
-#include "svadilfari/cc/qir-module/scope-builder.hpp"
-#include "svadilfari/cc/qir-module/script-builder.hpp"
 #include "svadilfari/cc/runtime/runtime.hpp"
+#include "svadilfari/cc/script-builder/scope-builder.hpp"
+#include "svadilfari/cc/script-builder/script-builder.hpp"
 #include "svadilfari/cc/vm/jit-engine.hpp"
 #include "svadilfari/cc/vm/script.hpp"
 #include "svadilfari/cc/vm/vm.hpp"
@@ -36,7 +36,6 @@ public:
   virtual Any visitMain(ToyParser::MainContext *ctx) override
   {
     visitChildren(ctx);
-    //    llvm::outs() << *module_ << "\n";
     return 1337;
   }
 
@@ -144,7 +143,6 @@ public:
       ret->set(builder()->toInt64(i * type_declaration.size), value);
       ++i;
     }
-    llvm::errs() << "Returning from array\n";
     return static_cast<TypedValuePrototypePtr>(ret);
   }
 
@@ -197,17 +195,11 @@ public:
 
   virtual Any visitDeclaration(ToyParser::DeclarationContext *ctx) override
   {
-    llvm::errs() << "visitDecl: " << ctx->getText() << "\n";
-
     // Getting the value of the declaration
     TypedValuePrototypePtr ssa_expr;
     if (ctx->expression())
     {
-      llvm::errs() << "Creating ssa"
-                   << "\n";
       ssa_expr = visit(ctx->expression());
-      llvm::errs() << "Got ssa"
-                   << "\n";
     }
 
     auto name = ctx->id()->getText();
@@ -236,7 +228,7 @@ public:
 
     if (ctx->ImutableVariableDecl())
     {
-      llvm::errs() << "Constant\n";
+      throw std::runtime_error("Constant not implemented");
       // builder().newStackVariable()
       // ssa_expr = runtime_definition_->getDefaultValue(ctx->typeName()->getText());
     }
@@ -258,29 +250,20 @@ public:
     std::vector<TypedValuePrototypePtr> args;
     for (auto &arg : context->expression())
     {
-      llvm::errs() << "xx\n";
       TypedValuePrototypePtr a = visit(arg);
-      llvm::errs() << "yy\n";
 
       args.push_back(a);
     }
-    llvm::errs() << "ret\n";
 
     return args;
   }
 
   virtual Any visitExpression(ToyParser::ExpressionContext *ctx) override
   {
-    llvm::errs() << "visitExpr\n";
-
     if (ctx->op)
     {
-      llvm::errs() << "A\n";
       TypedValuePrototypePtr lhs = visit(ctx->lhs);
       TypedValuePrototypePtr rhs = visit(ctx->rhs);
-      llvm::errs() << "Op: \n";
-      llvm::errs() << " - " << *lhs->readValue() << "\n";
-      llvm::errs() << " - " << *rhs->readValue() << "\n";
 
       switch (ctx->op->getType())
       {
@@ -308,51 +291,37 @@ public:
     }
     else if (ctx->functionName)
     {
-      llvm::errs() << "FUNCTION CALL: " << ctx->functionName->getText() << "\n";
       auto decl = program_.getFunctionByLlvmName(ctx->functionName->getText());
       if (decl.function == nullptr)
       {
         throw std::runtime_error("Function not declared.");
       }
 
-      llvm::errs() << "before calling\n";
-
       std::vector<TypedValuePrototypePtr> args = visit(ctx->argumentInstances());
-      llvm::errs() << "calling\n";
-      TypedValuePrototypePtr ret = builder()->call(decl, args);
+      TypedValuePrototypePtr              ret  = builder()->call(decl, args);
       return ret;
     }
     else if (ctx->arrayInitializer())
     {
-      llvm::errs() << "Entering expression\n";
-      auto x = visitArrayInitializer(ctx->arrayInitializer());
-      llvm::errs() << "Was here?\n";
-
+      auto                   x   = visitArrayInitializer(ctx->arrayInitializer());
       TypedValuePrototypePtr ret = x;
-      llvm::errs() << "Exiting expression\n";
-
       return ret;
     }
     else if (ctx->Integer())
     {
       auto text = ctx->Integer()->getText();
-      llvm::errs() << "B: " << text << "\n";
+
       auto p = text.c_str();
       errno  = 0;
       char   *p_end;
       int64_t cst = std::strtol(p, &p_end, 10);
       // TODO: Add support for literals
 
-      llvm::errs() << "Returning result\n";
       return static_cast<TypedValuePrototypePtr>(builder()->toInt64(cst));
     }
     else if (ctx->subexpression)
     {
       throw std::runtime_error("Subexpression not implemented");
-
-      /*
-      return visit(ctx->subexpression);
-      */
     }
     else if (ctx->arrayAddress)
     {
@@ -379,7 +348,6 @@ public:
       throw std::runtime_error("Other expressions not implemented");
     }
 
-    //    throw std::runtime_error("Not implemented");
     return visitChildren(ctx);
   }
 
@@ -511,7 +479,8 @@ int main(int, const char **)
   runtime.defineType<void>("Void");
 
   runtime.defineType<Qubit>("Qubit");
-  runtime.defineFunction("print", [](int64_t x) -> void { std::cout << "Value: " << x << "\n"; });
+  runtime.defineFunction("printInt",
+                         [](int64_t x) -> void { std::cout << "Value: " << x << "\n"; });
   runtime.defineFunction("hello<Int64>:Int64",
                          [](int64_t x) -> void { std::cout << "Value: " << x << "\n"; });
 
@@ -543,7 +512,7 @@ operation main(argc: Int64) : Int64 // Array< String >, Array< Int >
   runtime.initPlatform();
   VM   vm(runtime);
   auto ret = vm.execute<int64_t>(script, "main", 4);
-  llvm::errs() << "Result = " << ret << "\n";
+  llvm::errs() << "; Result = " << ret << "\n";
 
   // Script
   llvm::outs() << script.payload << "\n";
