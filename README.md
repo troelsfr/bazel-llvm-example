@@ -14,7 +14,7 @@ Run
 bazel run //svadilfari/python:example
 ```
 
-to build all dependencies of `qir/python/example.py` and run the executable. This commands builds a Rust library for logging, a C++ module (that uses the Rust library) which depends on LLVM to make a QIR builder and the C++ library is exported as a Python library. This Python library is imported in the python executable where it is used to build a QIR. A full build (including building required LLVM modules from scratch) is around 13 minutes. An example build output is here:
+to build all dependencies of `svadilfari/python/example.py` and run the executable. This commands builds a Rust library for logging, a C++ module (that uses the Rust library) which depends on LLVM to make a QIR builder and the C++ library is exported as a Python library. This Python library is imported in the python executable where it is used to build a QIR. A full build (including building required LLVM modules from scratch) is around 13 minutes. An example build output is here:
 
 ```
 % bazel run //svadilfari/python:example
@@ -130,7 +130,7 @@ bazel //...
 
 ## Notes
 
-Antlr output in `bazel-out//darwin-fastbuild/bin/qir/cc/parser/generated.inc/toylang/`
+Antlr output in `bazel-out//darwin-fastbuild/bin/svadilfari/cc/parser/generated.inc/toylang/`
 
 ## Things to use
 
