@@ -1,4 +1,7 @@
 #pragma once
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 #include "qir/cc/llvm/llvm-helpers.hpp"
 #include "qir/cc/runtime/runtime-definition.hpp"
 #include "qir/cc/runtime/runtime-type.hpp"
@@ -27,6 +30,7 @@ class Runtime : public RuntimeDefinition
 {
 public:
   using String           = std::string;
+  using Strings          = std::vector<String>;
   using LlvmType         = TypeDeclaration::LlvmType;
   using JITTargetAddress = llvm::JITTargetAddress;
   Runtime();
@@ -36,6 +40,12 @@ public:
   {
     using FunctionPointer = typename DecomposeLambda<decltype(&F::operator())>::FunctionPointer;
     defineFunctionImpl(name, FunctionPointer(lambda));
+  }
+
+  void defineFunction(String const &name, String const &ret, Strings const &arg_types, void *ptr)
+  {
+    declareFunction(name, ret, arg_types);
+    function_addresses_[name] = llvm::pointerToJITTargetAddress(ptr);
   }
 
   std::unordered_map<String, JITTargetAddress> const &functionAddresses() const

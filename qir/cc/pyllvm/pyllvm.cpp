@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 #include "qir/cc/qir-module/scope-builder.hpp"
 #include "qir/cc/runtime/runtime.hpp"
 #include "qir/cc/vm/script.hpp"
@@ -91,8 +94,18 @@ PYBIND11_MODULE(pyllvm, module)
       py::class_<RuntimeDefinition>(module, "RuntimeDefinition")
           .def("define_type",
                (void(RuntimeDefinition::*)(RuntimeDefinition::PrimitiveTypes const &,
-                                           std::string const &))(&RuntimeDefinition::defineType));
-  auto rt = py::class_<Runtime>(module, "Runtime", rt_def).def(py::init<>());
+                                           std::string const &))(&RuntimeDefinition::defineType))
+          .def("declare_function",
+               (void(RuntimeDefinition::*)(std::string const &, std::string const &,
+                                           std::vector<std::string> const &))(
+                   &RuntimeDefinition::declareFunction));
+
+  auto rt = py::class_<Runtime>(module, "Runtime", rt_def)
+                .def(py::init<>())
+                // TODO: Unfortunately it seems that PyBind does CTypes support
+                .def("define_function", (void(Runtime::*)(std::string const &, std::string const &,
+                                                          std::vector<std::string> const &,
+                                                          void *))(&Runtime::defineFunction));
 
   py::class_<Script>(module, "Script");
   py::class_<ScriptBuilder>(module, "ScriptBuilder")

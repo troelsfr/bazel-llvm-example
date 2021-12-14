@@ -1,4 +1,7 @@
 #pragma once
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 #include "qir/cc/llvm/llvm-helpers.hpp"
 #include "qir/cc/llvm/llvm.hpp"
 #include "qir/cc/runtime/runtime-type.hpp"
@@ -11,7 +14,7 @@
 #include <unordered_map>
 #include <vector>
 namespace compiler {
-struct FunctionDefinition
+struct RuntimeFunctionDeclaration
 {
   using String  = std::string;
   using Strings = std::vector<String>;
@@ -25,7 +28,8 @@ class RuntimeDefinition
 {
 public:
   using String                  = std::string;
-  using RuntimeFunctions        = std::unordered_map<String, FunctionDefinition>;
+  using Strings                 = std::vector<std::string>;
+  using RuntimeFunctions        = std::unordered_map<String, RuntimeFunctionDeclaration>;
   using LlvmContext             = llvm::LLVMContext;
   using LlvmModule              = llvm::Module;
   using LlvmInitiator           = TypeDeclaration::LlvmInitiator;
@@ -67,6 +71,7 @@ public:
   void declareFunction(String const &name);
   template <typename R>
   void declareFunction(String const &name);
+  void declareFunction(String const &name, String const &ret, Strings const &argument_types);
 
   String getTypeName(std::type_index const &ti)
   {
@@ -121,7 +126,7 @@ void RuntimeDefinition::defineType(String const &name)
 template <typename N, typename... Args>
 struct ResolveArgumentTypes
 {
-  static void apply(RuntimeDefinition &rd, FunctionDefinition::Strings &argument_types)
+  static void apply(RuntimeDefinition &rd, RuntimeFunctionDeclaration::Strings &argument_types)
   {
     auto name = rd.getTypeName(std::type_index(typeid(N)));
     argument_types.push_back(name);
@@ -132,7 +137,7 @@ struct ResolveArgumentTypes
 template <typename N>
 struct ResolveArgumentTypes<N>
 {
-  static void apply(RuntimeDefinition &rd, FunctionDefinition::Strings &argument_types)
+  static void apply(RuntimeDefinition &rd, RuntimeFunctionDeclaration::Strings &argument_types)
   {
     auto name = rd.getTypeName(std::type_index(typeid(N)));
     argument_types.push_back(name);
@@ -147,7 +152,7 @@ void RuntimeDefinition::declareFunction(String const &name)
     throw std::runtime_error("Function " + name + " already exists.");
   }
 
-  FunctionDefinition decl;
+  RuntimeFunctionDeclaration decl;
 
   decl.name        = name;
   decl.return_type = getTypeName(std::type_index(typeid(R)));
@@ -164,7 +169,7 @@ void RuntimeDefinition::declareFunction(String const &name)
     throw std::runtime_error("Function " + name + " already exists.");
   }
 
-  FunctionDefinition decl;
+  RuntimeFunctionDeclaration decl;
   decl.name                = name;
   decl.return_type         = getTypeName(std::type_index(typeid(R)));
   runtime_functions_[name] = decl;

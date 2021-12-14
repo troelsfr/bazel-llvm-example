@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 #include "qir/cc/qir-module/script-builder.hpp"
 
 #include "qir/cc/llvm/llvm.hpp"
@@ -7,18 +10,6 @@
 #include <unordered_map>
 #include <vector>
 namespace compiler {
-/*
-struct TypeDeclaration  // TODO: Replace with concrete runtime type
-{
-  using String = std::string;
-  using Type   = llvm::Type;
-
-  Type           *value{nullptr};
-  std::type_index type_id{std::type_index(typeid(nullptr_t))};
-  int64_t         size{sizeof(int64_t)};
-  String          name;
-};
-*/
 
 ScriptBuilder::ScriptBuilder(RuntimeDefinition const &runtime_definition)
   : context_{std::make_unique<LlvmContext>()}
@@ -34,6 +25,12 @@ ScriptBuilder::ScriptBuilder(RuntimeDefinition const &runtime_definition)
       type.llvm_type                          = type.initiator(context_.get(), type.name);
       from_native_types_[type.native_type_id] = type;
     }
+  }
+
+  for (auto const &decl_pair : runtime_definition.runtimeFunctions())
+  {
+    auto const &decl = decl_pair.second;
+    declareFunction(decl.name, decl.return_type, decl.argument_types);
   }
 }
 

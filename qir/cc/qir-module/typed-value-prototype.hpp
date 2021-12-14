@@ -1,4 +1,7 @@
 #pragma once
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 #include "qir/cc/llvm/llvm.hpp"
 #include "qir/cc/qir-module/value-container.hpp"
 #include "qir/cc/runtime/runtime-type.hpp"

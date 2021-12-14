@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 namespace compiler {
 
 class NamedValue : public TypedValue, public std::enable_shared_from_this<NamedValue>

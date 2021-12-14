@@ -1,6 +1,6 @@
-# LLVM-based Python module
+# Svadilfari - LLVM builder for Python
 
-In this repository we demonstrate how to build Python module relying on C++, LLVM and PyBind.
+The aim of this project is to provide a framework for rapid LLVM prototyping. The project is named Svaðilfari after the stallion that made it possible to build a wall around Asgard in just one winter. The project is written in C++ and is based on LLVM, Pybind11 and Python.
 
 ## Prerequisite
 

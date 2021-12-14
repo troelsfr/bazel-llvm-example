@@ -1,4 +1,7 @@
 #pragma once
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 #include "qir/cc/llvm/llvm.hpp"
 #include "qir/cc/qir-module/constant-int.hpp"
 #include "qir/cc/qir-module/function-declaration.hpp"
@@ -60,8 +63,6 @@ public:
   void removeBuilder(ScopeBuilder *builder);
   void finalise();
 
-  void      declareFunction(String const &name, String const &return_type = "Void",
-                            ArgTypeNames const &arguments = {}) override;
   Function *getOrDeclareFunction(String const &name, String const &return_type = "Void",
                                  ArgTypeNames const &arguments = {});
 
@@ -79,6 +80,10 @@ public:
 
   std::unique_ptr<LlvmContext> context_{};
   std::unique_ptr<LlvmModule>  module_{};
+
+protected:
+  void declareFunction(String const &name, String const &return_type = "Void",
+                       ArgTypeNames const &arguments = {}) override;
 
 private:
   void registerType(TypeDeclaration const &type);

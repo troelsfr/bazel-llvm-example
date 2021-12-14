@@ -4,6 +4,14 @@ rt = pyllvm.Runtime()
 rt.define_type(pyllvm.PrimitiveTypes.Int64, "Int64")
 rt.define_type(pyllvm.PrimitiveTypes.Int8, "Int8")
 rt.define_type(pyllvm.PrimitiveTypes.Int32, "Int32")
+rt.declare_function("__quantum__qis__cnot__body", "Int8", ["Int8"])
+
+# EXPERIMENTAL CODE
+# from ctypes import CFUNCTYPE, POINTER, c_int, c_void_p, c_long
+# @CFUNCTYPE(c_void_p, c_long)
+# def print_int(a):
+#     print("Value is", a)
+# rt.define_function("print", "Void", ["Int64"], print_int)
 
 program = pyllvm.ScriptBuilder(rt)
 

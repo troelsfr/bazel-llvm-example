@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 #include "qir/cc/qir-module/typed-value-prototype.hpp"
 
 #include "qir/cc/llvm/llvm.hpp"

@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 #include "ToyLexer.h"
 #include "ToyParser.h"
 #include "ToyParserBaseVisitor.h"
@@ -485,11 +488,6 @@ public:
 
     ToyIrBuilder visitor(runtime_definition_);
 
-    for (auto const &decl_pair : runtime_definition_.runtimeFunctions())
-    {
-      auto const &decl = decl_pair.second;
-      visitor.program().declareFunction(decl.name, decl.return_type, decl.argument_types);
-    }
     //    visitor.program().getOrDeclareFunction("print", "Void", {"Int64"});
     //    visitor.program().getOrDeclareFunction("Qubit::print<Int64>", "Void", {"Int64"});
 
@@ -548,15 +546,15 @@ operation main(argc: Int64) : Int64 // Array< String >, Array< Int >
   mutable x : Int64 = 9  + argc;
   print(x);
   let y = 9 * 2 +  test(x);
-//  print(y);
+  print(y);
   let arr = [y,2,3,4];
-//  print(arr[0]);
+  print(arr[0]);
   arr[1] = 29 + arr[0];
   x = arr[1] * 3;
-//  print(arr[1]);
-//  print(x);
+  print(arr[1]);
+  print(x);
   arr[3] = x;
-//  print(arr[3]);
+  print(arr[3]);
   return arr[3];
 })script");
 

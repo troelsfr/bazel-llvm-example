@@ -1,4 +1,8 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 #include "qir/cc/runtime/runtime.hpp"
+
 namespace {
 // TODO: Remove
 struct Qubit

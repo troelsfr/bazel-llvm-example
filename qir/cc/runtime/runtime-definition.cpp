@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 #include "qir/cc/runtime/runtime.hpp"
 
 #include <functional>
@@ -125,6 +128,20 @@ RuntimeDefinition::TypeDeclarationRegister const &RuntimeDefinition::typeRegiste
 RuntimeDefinition::RuntimeFunctions const &RuntimeDefinition::runtimeFunctions() const
 {
   return runtime_functions_;
+}
+
+void RuntimeDefinition::declareFunction(String const &name, String const &ret, Strings const &argument_types)
+{
+  if (runtime_functions_.find(name) != runtime_functions_.end())
+  {
+    throw std::runtime_error("Function " + name + " already exists.");
+  }
+
+  RuntimeFunctionDeclaration decl;
+  decl.name                = name;
+  decl.return_type         = ret;
+  decl.argument_types = argument_types;
+  runtime_functions_[name] = decl;
 }
 
 }  // namespace compiler

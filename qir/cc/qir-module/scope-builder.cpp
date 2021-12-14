@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 #include "qir/cc/qir-module/scope-builder.hpp"
 
 #include "qir/cc/qir-module/constant-array.hpp"
