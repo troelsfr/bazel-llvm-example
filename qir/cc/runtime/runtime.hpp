@@ -47,6 +47,7 @@ private:
   template <class R, class... Args>
   void defineFunctionImpl(String const &name, R (*ptr)(Args...))
   {
+    declareFunction<R, Args...>(name);
     function_addresses_[name] = llvm::pointerToJITTargetAddress(ptr);
   }
 

@@ -58,7 +58,7 @@ ScriptBuilder::LlvmModule *ScriptBuilder::module()
   return module_.get();
 }
 
-TypeDeclaration const &ScriptBuilder::getType(String const &name)
+TypeDeclaration const &ScriptBuilder::getType(String const &name) const
 {
   auto it = types_.find(name);
   if (it == types_.end())
@@ -69,7 +69,7 @@ TypeDeclaration const &ScriptBuilder::getType(String const &name)
   return it->second;
 }
 
-TypeDeclaration const &ScriptBuilder::getType(std::type_index const &type_id)
+TypeDeclaration const &ScriptBuilder::getType(std::type_index const &type_id) const
 {
   auto it = from_native_types_.find(type_id);
   if (it == from_native_types_.end())

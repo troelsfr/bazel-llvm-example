@@ -95,6 +95,15 @@ struct LLVMTypeAllocator<bool>
 };
 
 template <>
+struct LLVMTypeAllocator<int8_t>
+{
+  static llvm::Type *type(llvm::LLVMContext &context, std::string const &)
+  {
+    return llvm::Type::getInt8Ty(context);
+  }
+};
+
+template <>
 struct LLVMTypeAllocator<int16_t>
 {
   static llvm::Type *type(llvm::LLVMContext &context, std::string const &)

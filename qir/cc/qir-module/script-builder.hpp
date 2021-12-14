@@ -43,8 +43,8 @@ public:
   LlvmContext *context();
   LlvmModule  *module();
 
-  TypeDeclaration const &getType(String const &name);
-  TypeDeclaration const &getType(std::type_index const &type_id);
+  TypeDeclaration const &getType(String const &name) const;
+  TypeDeclaration const &getType(std::type_index const &type_id) const;
 
   Type *getLlvmType(String const &name);
 

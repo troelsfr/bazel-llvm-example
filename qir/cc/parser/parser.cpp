@@ -7,6 +7,8 @@
 #include "qir/cc/qir-module/scope-builder.hpp"
 #include "qir/cc/qir-module/script-builder.hpp"
 #include "qir/cc/runtime/runtime.hpp"
+#include "qir/cc/vm/jit-engine.hpp"
+#include "qir/cc/vm/script.hpp"
 #include "qir/cc/vm/vm.hpp"
 
 #include <iostream>
@@ -459,30 +461,6 @@ private:
   std::vector<ScopeBuilderPtr> function_builders_{};
 };
 
-struct Script
-{
-  using LlvmContext = llvm::LLVMContext;
-  using Module      = llvm::Module;
-  using String      = std::string;
-  enum Type
-  {
-    LL_SCRIPT,
-    BC_SCRIPT
-  };
-
-  Type   type{Type::LL_SCRIPT};
-  String name;
-  String payload;
-
-  std::unique_ptr<Module> load(LlvmContext *context) const
-  {
-    llvm::SMDiagnostic error;
-    auto               ret = llvm::parseIR(llvm::MemoryBufferRef(payload, name), error, *context);
-
-    return ret;
-  }
-};
-
 class Compiler
 {
 public:
@@ -507,7 +485,14 @@ public:
 
     ToyIrBuilder visitor(runtime_definition_);
 
-    visitor.program().getOrDeclareFunction("print", "Void", {"Int64"});
+    for (auto const &decl_pair : runtime_definition_.runtimeFunctions())
+    {
+      auto const &decl = decl_pair.second;
+      visitor.program().declareFunction(decl.name, decl.return_type, decl.argument_types);
+    }
+    //    visitor.program().getOrDeclareFunction("print", "Void", {"Int64"});
+    //    visitor.program().getOrDeclareFunction("Qubit::print<Int64>", "Void", {"Int64"});
+
     visitor.visitMain(tree);
 
     // Creating script
@@ -531,54 +516,6 @@ private:
   RuntimeDefinition &runtime_definition_;
 };
 
-class VM
-{
-public:
-  using String = std::string;
-
-  // TODO: Make runtime copyable?
-  VM(Runtime &runtime)
-    : runtime_{runtime}
-  {}
-
-  template <typename R, typename... Args>
-  R execute(Script const &script, String const &name, Args &&...args)
-  {
-    typedef R (*CallType)(Args...);
-    // Loading the
-    auto context = std::make_unique<llvm::LLVMContext>();
-    auto module  = script.load(context.get());
-
-    //
-    llvm::ExitOnError          exit_on_error;
-    std::unique_ptr<JitEngine> jit_engine = exit_on_error(JitEngine::createNew(runtime_));
-    module->setDataLayout(jit_engine->getDataLayout());
-
-    auto RT  = jit_engine->getMainJITDylib().createResourceTracker();
-    auto TSM = llvm::orc::ThreadSafeModule(std::move(module), std::move(context));
-    exit_on_error(jit_engine->addModule(std::move(TSM), RT));
-    // TODO: Reinitialize the Runtime thingie InitializeModule();
-
-    // Get the anonymous expression's JITSymbol.
-    auto Sym = exit_on_error(jit_engine->lookup(name));
-
-    // Get the symbol's address and cast it to the right type (takes no
-    // arguments, returns a double) so we can call it as a native function.
-
-    auto *function = (CallType)(intptr_t)Sym.getAddress();
-    auto  ret      = function(std::forward<Args>(args)...);
-
-    // Delete the anonymous expression module from the JIT.
-    //  llvm::errs() << "Before RT remove\n";
-    exit_on_error(RT->remove());
-    //  llvm::errs() << "Exiting\n";
-    return ret;
-  }
-
-private:
-  Runtime &runtime_;
-};
-
 int main(int, const char **)
 {
   llvm::InitializeNativeTarget();
@@ -595,6 +532,8 @@ int main(int, const char **)
 
   runtime.defineType<Qubit>("Qubit");
   runtime.defineFunction("print", [](int64_t x) -> void { std::cout << "Value: " << x << "\n"; });
+  runtime.defineFunction("hello<Int64>:Int64",
+                         [](int64_t x) -> void { std::cout << "Value: " << x << "\n"; });
 
   Compiler compiler(runtime);
 

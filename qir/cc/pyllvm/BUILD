@@ -5,6 +5,8 @@ pybind_extension(
     srcs = glob(["pyllvm.cpp"]),
     deps=[
       "//qir/cc/qir-module:qir-module",
+      "//qir/cc/runtime:lib",
+      "//qir/cc/vm:lib",
     ],
     visibility = ["//visibility:private"],
 )

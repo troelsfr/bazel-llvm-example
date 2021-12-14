@@ -25,8 +25,6 @@ ScopeBuilder::ScopeBuilder(ScriptBuilder &qir_program, ScopeRegisterPtr const &s
   , scope_{scope}
 {
   qir_program_.addBuilder(this);
-  setupBuiltIns();
-
   builder_.SetInsertPoint(block_);
 }
 
@@ -167,15 +165,6 @@ TypedValuePtr ScopeBuilder::constantGetElement(ConstantArrayPtr const   &array,
                                     builder_.CreateLoad(array->elementType(), raw_ptr));
 
   return ret;
-}
-
-void ScopeBuilder::setupBuiltIns()
-{
-  qubit_allocator_ = qir_program_.getOrDeclareFunction("__quantum__qis__qubit_create", "Qubit");
-  quantum_x_ = qir_program_.getOrDeclareFunction("__quantum__qis__x__body", "Void", {"Qubit"});
-  quantum_z_ = qir_program_.getOrDeclareFunction("__quantum__qis__z__body", "Void", {"Qubit"});
-  quantum_cnot_ =
-      qir_program_.getOrDeclareFunction("__quantum__qis__cnot__body", "Void", {"Qubit", "Qubit"});
 }
 
 bool ScopeBuilder::isActive()

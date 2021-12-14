@@ -1,4 +1,6 @@
 #include "qir/cc/qir-module/scope-builder.hpp"
+#include "qir/cc/runtime/runtime.hpp"
+#include "qir/cc/vm/script.hpp"
 
 #include <pybind11/functional.h>
 #include <pybind11/pybind11.h>
@@ -17,6 +19,7 @@ PYBIND11_MODULE(pyllvm, module)
   module.doc() = "pyllvm";
   using namespace compiler;
 
+  py::class_<TypeDeclaration>(module, "TypeDeclaration");
   py::class_<TypeDeclarationRegister>(module, "TypeDeclarationRegister");
 
   py::class_<Qubit>(module, "Qubit");
@@ -63,19 +66,42 @@ PYBIND11_MODULE(pyllvm, module)
       .def("new_heap_array", &ScopeBuilder::newHeapArray)
       .def("new_stack_variable", &ScopeBuilder::newStackVariable)
       .def("new_stack_array", &ScopeBuilder::newStackArray)
-      .def("allocate_qubit", &ScopeBuilder::allocateQubit)
-      .def("x", &ScopeBuilder::x)
-      .def("z", &ScopeBuilder::z)
-      .def("cnot", &ScopeBuilder::cnot);
+      .def("allocate_qubit", &ScopeBuilder::allocateQubit);
 
   auto else_stmt = py::class_<ElseStatement, ElseStatementPtr>(module, "ElseStatement", builder);
   auto if_stmt   = py::class_<IfStatement, IfStatementPtr>(module, "IfStatement", else_stmt)
                      .def("else_statement", &IfStatement::elseStatement);
 
+  py::enum_<RuntimeDefinition::PrimitiveTypes>(module, "PrimitiveTypes")
+      .value("Void", RuntimeDefinition::PrimitiveTypes::TYPE_VOID)
+      .value("Bool", RuntimeDefinition::PrimitiveTypes::TYPE_BOOL)
+      .value("Int8", RuntimeDefinition::PrimitiveTypes::TYPE_INT8)
+      .value("Int16", RuntimeDefinition::PrimitiveTypes::TYPE_INT16)
+      .value("Int32", RuntimeDefinition::PrimitiveTypes::TYPE_INT32)
+      .value("Int64", RuntimeDefinition::PrimitiveTypes::TYPE_INT64)
+      .value("Uint8", RuntimeDefinition::PrimitiveTypes::TYPE_UINT8)
+      .value("Uint16", RuntimeDefinition::PrimitiveTypes::TYPE_UINT16)
+      .value("Uint32", RuntimeDefinition::PrimitiveTypes::TYPE_UINT32)
+      .value("Uint64", RuntimeDefinition::PrimitiveTypes::TYPE_UINT64)
+      .value("Float32", RuntimeDefinition::PrimitiveTypes::TYPE_FLOAT32)
+      .value("Float64", RuntimeDefinition::PrimitiveTypes::TYPE_FLOAT64)
+      .export_values();
+
+  auto rt_def =
+      py::class_<RuntimeDefinition>(module, "RuntimeDefinition")
+          .def("define_type",
+               (void(RuntimeDefinition::*)(RuntimeDefinition::PrimitiveTypes const &,
+                                           std::string const &))(&RuntimeDefinition::defineType));
+  auto rt = py::class_<Runtime>(module, "Runtime", rt_def).def(py::init<>());
+
+  py::class_<Script>(module, "Script");
   py::class_<ScriptBuilder>(module, "ScriptBuilder")
-      .def(py::init<>())
+      .def(py::init<RuntimeDefinition const &>())
       .def("finalise", &ScriptBuilder::finalise)
       .def("new_function", &ScriptBuilder::newFunction)
-      .def("get_type", &ScriptBuilder::getType)
+      .def("get_type",
+           [](ScriptBuilder const &builder, std::string const &name) -> TypeDeclaration {
+             return builder.getType(name);
+           })
       .def("get_qir", &ScriptBuilder::getQir);
 }

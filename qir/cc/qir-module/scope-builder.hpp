@@ -126,7 +126,6 @@ private:
   bool finalise_called_{false};
 
   void requireIsActive();
-  void setupBuiltIns();
 
   // Qubit functions
   LlvmFunction *qubit_allocator_{nullptr};

@@ -19,7 +19,7 @@ struct TypeDeclaration
   uint64_t        id{0};
   LlvmType       *llvm_type{nullptr};
   std::type_index native_type_id{std::type_index(typeid(nullptr_t))};
-  int64_t         size{0};
+  uint64_t        size{0};
   String          name{""};
 
   //
