@@ -65,7 +65,6 @@ public:
     /// EXAMPLE: How to dynamically create a runtime
     // See https://stackoverflow.com/questions/57612173/llvm-jit-symbols-not-found?rq=1
     // Register every symbol that can be accessed from the JIT'ed code.
-    typedef void (*FunctionPtr)(int64_t);
 
     llvm::orc::SymbolMap M;
 

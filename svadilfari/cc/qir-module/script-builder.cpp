@@ -122,7 +122,7 @@ ScopeBuilderPtr ScriptBuilder::newFunction(String const &name, String const &ret
   return ScopeBuilder::create(*this, scope_->childScope(), block);
 }
 
-ScriptBuilder::String ScriptBuilder::getQir()
+ScriptBuilder::String ScriptBuilder::getIr()
 {
   finalise();
   // TODO: Move to program

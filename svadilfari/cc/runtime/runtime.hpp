@@ -33,7 +33,10 @@ public:
   using Strings          = std::vector<String>;
   using LlvmType         = TypeDeclaration::LlvmType;
   using JITTargetAddress = llvm::JITTargetAddress;
+
   Runtime();
+
+  void initPlatform();
 
   template <typename F>
   void defineFunction(String const &name, F &&lambda)

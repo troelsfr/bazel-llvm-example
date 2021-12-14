@@ -6,7 +6,7 @@ cc_library(
     deps = [
       "//svadilfari/cc/llvm:lib",
       "//svadilfari/cc/runtime:lib",
-
+      "//svadilfari/cc/vm:lib",
       "//svadilfari/rust/logger:logger",
     ],
 )

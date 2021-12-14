@@ -62,7 +62,7 @@ public:
   using Builder            = llvm::IRBuilder<>;
   using TerminatorFunction = std::function<void(Builder &)>;
 
-  static ScopeBuilderPtr create(ScriptBuilder &qir_program, ScopeRegisterPtr const &scope,
+  static ScopeBuilderPtr create(ScriptBuilder &script_builder, ScopeRegisterPtr const &scope,
                                 LlvmBlock *block);
 
   // Quantum operations
@@ -116,9 +116,9 @@ public:
   void finalise();
 
 protected:
-  explicit ScopeBuilder(ScriptBuilder &qir_program, ScopeRegisterPtr const &scope,
+  explicit ScopeBuilder(ScriptBuilder &script_builder, ScopeRegisterPtr const &scope,
                         LlvmBlock *block);
-  ScriptBuilder     &qir_program_;
+  ScriptBuilder     &script_builder_;
   Builder            builder_;
   LlvmBlock         *block_{nullptr};
   ScopeRegisterPtr   scope_{nullptr};
@@ -147,18 +147,18 @@ class ElseStatement : public ScopeBuilder
 public:
   using ElseStatementPtr = std::shared_ptr<ElseStatement>;
 
-  static ElseStatementPtr create(ScriptBuilder &qir_program, ScopeRegisterPtr const &scope,
+  static ElseStatementPtr create(ScriptBuilder &script_builder, ScopeRegisterPtr const &scope,
                                  LlvmBlock *block, LlvmBlock *final_block)
   {
     ElseStatementPtr ret;
-    ret.reset(new ElseStatement(qir_program, scope, block, final_block));
+    ret.reset(new ElseStatement(script_builder, scope, block, final_block));
     return ret;
   }
 
 protected:
-  ElseStatement(ScriptBuilder &qir_program, ScopeRegisterPtr const &scope, LlvmBlock *block,
+  ElseStatement(ScriptBuilder &script_builder, ScopeRegisterPtr const &scope, LlvmBlock *block,
                 LlvmBlock *final_block)
-    : ScopeBuilder(qir_program, scope, block)
+    : ScopeBuilder(script_builder, scope, block)
     , final_block_{final_block}
   {
     setTerminatorFunction([final_block](Builder &builder) { builder.CreateBr(final_block); });
@@ -173,17 +173,17 @@ class IfStatement : public ElseStatement
 public:
   using IfStatementPtr = std::shared_ptr<IfStatement>;
 
-  static IfStatementPtr create(ScriptBuilder &qir_program, ScopeRegisterPtr const &scope,
+  static IfStatementPtr create(ScriptBuilder &script_builder, ScopeRegisterPtr const &scope,
                                LlvmBlock *block, LlvmBlock *final_block)
   {
     IfStatementPtr ret;
-    ret.reset(new IfStatement(qir_program, scope, block, final_block));
+    ret.reset(new IfStatement(script_builder, scope, block, final_block));
     return ret;
   }
 
   ElseStatementPtr elseStatement()
   {
-    auto else_block = llvm::BasicBlock::Create(*qir_program_.context(), "else",
+    auto else_block = llvm::BasicBlock::Create(*script_builder_.context(), "else",
                                                final_block_->getParent(), final_block_);
 
     final_block_->replaceUsesWithIf(else_block, [](llvm::Use &use) {
@@ -194,7 +194,7 @@ public:
     builder_.CreateBr(final_block_);
     assert(!isActive());
 
-    return ElseStatement::create(qir_program_, scope_->childScope(), else_block, final_block_);
+    return ElseStatement::create(script_builder_, scope_->childScope(), else_block, final_block_);
   }
 
 protected:

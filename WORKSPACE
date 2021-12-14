@@ -154,16 +154,3 @@ http_archive(
     strip_prefix = "googletest-release-1.10.0",
     build_file = "@//:config/BUILD.googletest",
 )
-
-
-# ================================================================
-# libPFM - required by LLVM Jit
-# ================================================================
-
-# http_archive(
-#     name = "libpfm4",
-#     build_file = "@//:BUILD.libpfm4",
-#     sha256 = "9193787a73201b4254e3669243fd71d15a9550486920861912090a09f366cf68",
-#     strip_prefix = "libpfm-4.8.0",
-#     urls = ["https://iweb.dl.sourceforge.net/project/perfmon2/libpfm4/libpfm-4.8.0.tar.gz"],
-# )

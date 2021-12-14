@@ -10,6 +10,7 @@
 #include "svadilfari/cc/runtime/runtime-definition.hpp"
 #include "svadilfari/cc/runtime/runtime-type.hpp"
 #include "svadilfari/cc/runtime/script-builder-interface.hpp"
+#include "svadilfari/cc/vm/script.hpp"
 
 #include <iostream>
 #include <typeindex>
@@ -57,7 +58,7 @@ public:
   ScopeBuilderPtr newFunction(String const &name, String const &return_type = "Void",
                               ArgTypeNames const &arguments = {});
 
-  String getQir();
+  String getIr();
 
   void addBuilder(ScopeBuilder *builder);
   void removeBuilder(ScopeBuilder *builder);
@@ -76,6 +77,35 @@ public:
   ScopeRegister &scope()
   {
     return *scope_;
+  }
+
+  Script makeScript(Script::Type const &type = Script::Type::LL_SCRIPT) const
+  {
+    if (isModuleBroken())
+    {
+      throw std::runtime_error("Module is broken.");
+    }
+
+    Script script;
+    script.type = type;
+    llvm::raw_string_ostream stream(script.payload);
+    if (type == Script::Type::BC_SCRIPT)
+    {
+      llvm::WriteBitcodeToFile(*module_, stream);
+    }
+    else
+    {
+      stream << *module_;
+    }
+    return script;
+  }
+
+  bool isModuleBroken() const
+  {
+    llvm::ModuleAnalysisManager mam;
+    llvm::VerifierAnalysis      verifier;
+    auto                        result = verifier.run(*module_, mam);
+    return result.IRBroken;
   }
 
   std::unique_ptr<LlvmContext> context_{};

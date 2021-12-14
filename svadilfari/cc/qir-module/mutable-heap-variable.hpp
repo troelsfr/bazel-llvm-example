@@ -16,10 +16,10 @@ public:
   using MutableHeapVariablePtr = ValueContianer<MutableHeapVariable>;
 
   static MutableHeapVariablePtr create(TypeDeclaration const &type, llvm::IRBuilder<> &builder,
-                                       llvm::Instruction *instr, ScriptBuilder &qir_program)
+                                       llvm::Instruction *instr, ScriptBuilder &script_builder)
   {
     MutableHeapVariablePtr ret;
-    ret.reset(new MutableHeapVariable(type, builder, instr, qir_program));
+    ret.reset(new MutableHeapVariable(type, builder, instr, script_builder));
     return ret;
   }
 
@@ -59,7 +59,7 @@ public:
 
 private:
   MutableHeapVariable(TypeDeclaration const &type, Builder &builder, llvm::Instruction *instr,
-                      ScriptBuilder &qir_program)
+                      ScriptBuilder &script_builder)
     : TypedValuePrototype(type, builder)
     , instr_{instr}
     , builder_{builder}

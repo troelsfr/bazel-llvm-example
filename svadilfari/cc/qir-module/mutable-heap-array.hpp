@@ -16,10 +16,10 @@ public:
   using MutableHeapArrayPtr = ValueContianer<MutableHeapArray>;
 
   static MutableHeapArrayPtr create(TypeDeclaration type, Builder &builder,
-                                    llvm::Instruction *instr, ScriptBuilder &qir_program)
+                                    llvm::Instruction *instr, ScriptBuilder &script_builder)
   {
     MutableHeapArrayPtr ret;
-    ret.reset(new MutableHeapArray(type, builder, instr, qir_program));
+    ret.reset(new MutableHeapArray(type, builder, instr, script_builder));
     return ret;
   }
 
@@ -52,7 +52,7 @@ public:
 
 private:
   MutableHeapArray(TypeDeclaration type, Builder &builder, llvm::Instruction *instr,
-                   ScriptBuilder &qir_program)
+                   ScriptBuilder &script_builder)
     : TypedValuePrototype(type, builder)
     , instr_{instr}
     , builder_{builder}

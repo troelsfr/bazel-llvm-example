@@ -4,6 +4,7 @@
 #include "svadilfari/cc/qir-module/scope-builder.hpp"
 #include "svadilfari/cc/runtime/runtime.hpp"
 #include "svadilfari/cc/vm/script.hpp"
+#include "svadilfari/cc/vm/vm.hpp"
 
 #include <pybind11/functional.h>
 #include <pybind11/pybind11.h>
@@ -24,6 +25,7 @@ PYBIND11_MODULE(pysvadilfari, module)
 
   py::class_<TypeDeclaration>(module, "TypeDeclaration");
   py::class_<TypeDeclarationRegister>(module, "TypeDeclarationRegister");
+  py::class_<FunctionDeclaration>(module, "FunctionDeclaration");
 
   py::class_<Qubit>(module, "Qubit");
   auto typed_value =
@@ -67,9 +69,10 @@ PYBIND11_MODULE(pysvadilfari, module)
       .def("if_statement", &ScopeBuilder::ifStatement)
       .def("new_heap_variable", &ScopeBuilder::newHeapVariable)
       .def("new_heap_array", &ScopeBuilder::newHeapArray)
+      .def("call", &ScopeBuilder::call)
+      //      .def("free_heap", )
       .def("new_stack_variable", &ScopeBuilder::newStackVariable)
-      .def("new_stack_array", &ScopeBuilder::newStackArray)
-      .def("allocate_qubit", &ScopeBuilder::allocateQubit);
+      .def("new_stack_array", &ScopeBuilder::newStackArray);
 
   auto else_stmt = py::class_<ElseStatement, ElseStatementPtr>(module, "ElseStatement", builder);
   auto if_stmt   = py::class_<IfStatement, IfStatementPtr>(module, "IfStatement", else_stmt)
@@ -102,12 +105,18 @@ PYBIND11_MODULE(pysvadilfari, module)
 
   auto rt = py::class_<Runtime>(module, "Runtime", rt_def)
                 .def(py::init<>())
+                .def("init_platform", &Runtime::initPlatform)
                 // TODO: Unfortunately it seems that PyBind does CTypes support
                 .def("define_function", (void(Runtime::*)(std::string const &, std::string const &,
                                                           std::vector<std::string> const &,
                                                           void *))(&Runtime::defineFunction));
 
-  py::class_<Script>(module, "Script");
+  auto script_class = py::class_<Script>(module, "Script");
+  py::enum_<Script::Type>(script_class, "Type")
+      .value("LL_SCRIPT", Script::Type::LL_SCRIPT)
+      .value("BC_SCRIPT", Script::Type::BC_SCRIPT)
+      .export_values();
+
   py::class_<ScriptBuilder>(module, "ScriptBuilder")
       .def(py::init<RuntimeDefinition const &>())
       .def("finalise", &ScriptBuilder::finalise)
@@ -116,5 +125,13 @@ PYBIND11_MODULE(pysvadilfari, module)
            [](ScriptBuilder const &builder, std::string const &name) -> TypeDeclaration {
              return builder.getType(name);
            })
-      .def("get_qir", &ScriptBuilder::getQir);
+      .def("get_function_by_name", &ScriptBuilder::getFunctionByLlvmName)
+      .def("get_ir", &ScriptBuilder::getIr)
+      .def("make_script", &ScriptBuilder::makeScript, py::arg("type") = Script::Type::LL_SCRIPT);
+
+  py::class_<VM>(module, "VM")
+      .def(py::init<Runtime &>())
+      .def("execute", [](VM &self, Script const &script, std::string const &name) {
+        self.execute(script, name);
+      });
 }

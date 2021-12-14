@@ -16,10 +16,10 @@ public:
   using MutableStackVariablePtr = ValueContianer<MutableStackVariable>;
 
   static MutableStackVariablePtr create(TypeDeclaration type, llvm::IRBuilder<> &builder,
-                                        llvm::Value *instr, ScriptBuilder &qir_program)
+                                        llvm::Value *instr, ScriptBuilder &script_builder)
   {
     MutableStackVariablePtr ret;
-    ret.reset(new MutableStackVariable(type, builder, instr, qir_program));
+    ret.reset(new MutableStackVariable(type, builder, instr, script_builder));
     return ret;
   }
 
@@ -66,7 +66,7 @@ public:
 
 private:
   MutableStackVariable(TypeDeclaration type, Builder &builder, llvm::Value *instr,
-                       ScriptBuilder &qir_program)
+                       ScriptBuilder &script_builder)
     : TypedValuePrototype(type, builder)
     , type_{type}
     , instr_{instr}

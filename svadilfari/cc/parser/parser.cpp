@@ -134,14 +134,14 @@ public:
       throw std::runtime_error("Cannot construct array with no type and no type hint.");
     }
 
-    auto qir_type = program_.getType(type_id);
-    auto size     = builder()->toInt64(initialiser_list.size());
-    auto ret      = builder()->newStackArray(qir_type, size, "");
+    auto type_declaration = program_.getType(type_id);
+    auto size             = builder()->toInt64(initialiser_list.size());
+    auto ret              = builder()->newStackArray(type_declaration, size, "");
 
     int64_t i = 0;
     for (auto &value : initialiser_list)
     {
-      ret->set(builder()->toInt64(i * qir_type.size), value);
+      ret->set(builder()->toInt64(i * type_declaration.size), value);
       ++i;
     }
     llvm::errs() << "Returning from array\n";
@@ -493,21 +493,7 @@ public:
 
     visitor.visitMain(tree);
 
-    // Creating script
-    Script script;
-    script.type                     = type;
-    auto                     module = visitor.program().module();
-    llvm::raw_string_ostream stream(script.payload);
-    if (type == Script::Type::BC_SCRIPT)
-    {
-      llvm::WriteBitcodeToFile(*module, stream);
-    }
-    else
-    {
-      stream << *module;
-    }
-
-    return script;
+    return visitor.program().makeScript();
   }
 
 private:
@@ -516,10 +502,6 @@ private:
 
 int main(int, const char **)
 {
-  llvm::InitializeNativeTarget();
-  llvm::InitializeNativeTargetAsmPrinter();
-  llvm::InitializeNativeTargetAsmParser();
-
   Runtime runtime;
 
   runtime.defineType<int8_t>("Int8");
@@ -558,6 +540,7 @@ operation main(argc: Int64) : Int64 // Array< String >, Array< Int >
   return arr[3];
 })script");
 
+  runtime.initPlatform();
   VM   vm(runtime);
   auto ret = vm.execute<int64_t>(script, "main", 4);
   llvm::errs() << "Result = " << ret << "\n";
